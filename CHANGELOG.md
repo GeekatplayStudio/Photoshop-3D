@@ -4,6 +4,8 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-02
+
 ### Fixed
 - **The panel icon is no longer empty when the panel is collapsed in a dock (Windows).**
   - Photoshop looks for `<name>@1x.png` and `@2x.png` and needs `"species": ["chrome"]` on panel icons.
