@@ -131,7 +131,9 @@ export async function startApp() {
             return tempStore.nativePath(path);
         },
         openPath: async (path) => {
-            await shell.openPath(path, "Install the Geekatplay 3D Layers update with Creative Cloud");
+            // Resolves with an error text instead of rejecting on some UXP versions.
+            const result = await shell.openPath(path, "Install the Geekatplay 3D Layers update with Creative Cloud");
+            if (typeof result === "string" && result.trim()) throw new Error(result.trim());
         },
     });
 

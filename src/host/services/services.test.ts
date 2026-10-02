@@ -361,6 +361,21 @@ describe("updater", () => {
         expect(opened).toEqual([]);
     });
 
+    it("explains what to do when Photoshop's open-file prompt is blocked", async () => {
+        const ccx = new Uint8Array([7, 7, 7]);
+        const sum = createHash("sha256").update(ccx).digest("hex");
+        const fetch = scriptedFetch([
+            route("GET", /releases\/latest$/, () => json(release("v0.2.0"))),
+            route("GET", "https://dl/v0.2.0.ccx", () => bytes(ccx)),
+            route("GET", "https://dl/v0.2.0.sums", () => new Response(`${sum}  geekatplay-3d-layers-0.2.0.ccx\n`)),
+        ]);
+        const { updater } = await makeUpdater(fetch);
+        (updater as unknown as { deps: { openPath: () => Promise<void> } }).deps.openPath = async () => {
+            throw new Error("User denied.");
+        };
+        await expect(updater.install()).rejects.toThrow(/did not open the installer \(User denied\.\).*choose "Allow"/);
+    });
+
     it("handles no releases and being up to date", async () => {
         const none = await makeUpdater(scriptedFetch([route("GET", /releases\/latest$/, () => json({ message: "Not Found" }, 404))]));
         const noneInfo = await none.updater.check();

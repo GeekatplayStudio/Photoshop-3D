@@ -123,7 +123,14 @@ export class Updater {
         }
 
         const path = await this.deps.saveTemp(asset.name, bytes);
-        await this.deps.openPath(path);
+        try {
+            await this.deps.openPath(path);
+        } catch (err) {
+            // Photoshop asks the user before a plugin opens a file; "Block" ends up here.
+            const reason = (err as Error)?.message ?? String(err);
+            this.deps.log.warn(`Opening the update installer failed: ${reason}`);
+            throw new Error(`Photoshop did not open the installer (${reason}). Click Install again and choose "Allow", or run the install script from the release page. The verified file is at ${path}.`);
+        }
         this.deps.log.info(`Opened ${path} with Creative Cloud`);
         return {
             started: true,

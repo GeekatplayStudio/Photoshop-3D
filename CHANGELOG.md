@@ -4,6 +4,9 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+### Changed
+- Updater: if Photoshop's "open file" prompt is blocked, the panel now explains how to finish the update (Install again → Allow, or run the install script) instead of showing "User denied.".
+
 ## [0.1.0] - 2026-10-02
 
 First release.
