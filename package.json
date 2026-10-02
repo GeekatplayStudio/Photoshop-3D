@@ -26,7 +26,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "verify": "npm run typecheck && npm test && npm run dist && node scripts/verify-package.mjs",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "docs:screenshots": "node scripts/docs-screenshots.mjs"
   },
   "dependencies": {
     "@pmndrs/assets": "^1.7.0",

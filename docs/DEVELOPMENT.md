@@ -45,3 +45,12 @@ npm install
 ## Icons and fixtures
 - `node scripts/make-icons.mjs` regenerates `plugin/icons/*.png` (committed).
 - `node scripts/make-test-model.mjs` regenerates `tests/fixtures/public/samples/totem.glb` (committed, 7 KB).
+
+## Documentation screenshots
+`npm run docs:screenshots` (with `npm run dev:web` running) renders `docs/images/ui-*.png` (the panel tabs, at 2×) and `ui-editor.jpg` against the mock host, so the pictures always match the current UI. The README's editor picture uses a real model:
+
+```bash
+DOCS_MODEL="$APPDATA/Geekatplay/3D Layers/library/<id>/model.glb" DOCS_MODEL_NAME="Viking axe" DOCS_TURN=-75 npm run docs:screenshots
+```
+
+`DOCS_ONLY=editor` renders just the editor; `DOCS_PRESET` picks the light preset (default *Golden Hour*). The Photoshop screenshots (`plugins-menu.jpg`, `update-permission.jpg`, `photoshop-layer.jpg`) are captured by hand.

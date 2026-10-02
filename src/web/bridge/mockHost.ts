@@ -57,9 +57,11 @@ export function createMockTransport(): Transport {
 
     const editorInit = (libraryId: string): EditorInit => {
         const item = library.find((i) => i.id === libraryId) ?? library[0];
+        // ?mode=update and ?name=… let the docs screenshots show the re-pose dialog.
+        const query = new URLSearchParams(location.search);
         return {
-            mode: "new",
-            model: { libraryId: item.id, name: item.name, url: `./${item.modelFile}`, file: item.modelFile, sizeBytes: item.sizeBytes },
+            mode: query.get("mode") === "update" ? "update" : "new",
+            model: { libraryId: item.id, name: query.get("name") ?? item.name, url: `./${item.modelFile}`, file: item.modelFile, sizeBytes: item.sizeBytes },
             settings: settingsForNewModel(settings.editor.lighting, 1024),
             lighting: settings.editor.lighting,
             rememberLighting: true,
@@ -109,7 +111,7 @@ export function createMockTransport(): Transport {
                 hint: id === "comfyui" ? undefined : "Add your API key in Settings.",
                 capabilities: { generate: true, browse: true, cancel: id !== "tripo" },
             })),
-        "providers.test": ({ providerId }) => ({ ok: true, message: `Mock: ${PROVIDER_LABELS[providerId]} reachable.`, balance: "1000 credits" }),
+        "providers.test": ({ providerId }) => ({ ok: true, message: `Connected to ${PROVIDER_LABELS[providerId]}.`, balance: "1000 credits" }),
         "ps.context": () => ctx,
         "ps.sourcePreview": () => ({ dataUrl: "./samples/totem-thumb.png", width: 256, height: 256, label: "Chair" }),
         "generate.start": ({ providerId, name }) => {

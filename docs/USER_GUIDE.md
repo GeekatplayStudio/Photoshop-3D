@@ -2,26 +2,30 @@
 
 ## 1. Install
 
-You need Photoshop 2025 (version 26) or newer and the Creative Cloud desktop app (it provides Adobe's plugin installer).
+You need Photoshop 2025 (version 26) or newer and the Creative Cloud desktop app, which comes with Photoshop and provides Adobe's plugin installer. **[The install guide](INSTALL.md)** walks through every step with pictures. In short:
 
-| Platform | How |
+| Way | How |
 |---|---|
-| Windows | Download `install-windows.cmd` and `install-windows.ps1` from the [latest release](https://github.com/GeekatplayStudio/Photoshop-3D/releases/latest) into one folder, then double-click `install-windows.cmd`. Or, in PowerShell: `irm https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-windows.ps1 \| iex` |
-| macOS | In Terminal: `curl -fsSL https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-macos.command \| bash`. Or download `install-macos.command` and run `bash install-macos.command`. |
-| Any | Double-click `geekatplay-3d-layers-<version>.ccx` from the release; Creative Cloud asks you to confirm and installs it. |
+| Double-click (easiest) | [Download `geekatplay-3d-layers.ccx`](https://github.com/GeekatplayStudio/Photoshop-3D/releases/latest/download/geekatplay-3d-layers.ccx), double-click it, and click **Install** when Creative Cloud asks. |
+| Windows installer | In PowerShell: `irm https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-windows.ps1 \| iex`. Or download [`install-windows.cmd`](https://github.com/GeekatplayStudio/Photoshop-3D/releases/latest/download/install-windows.cmd) and double-click it; it works on its own. |
+| macOS installer | In Terminal: `curl -fsSL https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-macos.command \| bash` |
 
-The script prints each step: find Adobe's installer → download the release → verify its SHA-256 checksum → remove the previous copy → install → confirm Photoshop registered it. Photoshop can stay open. To install a specific file instead, run `install-windows.ps1 -Ccx <file.ccx>` or `bash install-macos.command <file.ccx>`.
+The installers print each step: find Adobe's installer → download the release → verify its SHA-256 checksum → remove the previous copy → install → confirm Photoshop registered it. If something fails, they say what went wrong and what to do. Photoshop can stay open. To install a specific file instead, run `install-windows.ps1 -Ccx <file.ccx>` or `bash install-macos.command <file.ccx>`; to install a specific version, `-Version v0.1.0` or `--version=v0.1.0`.
 
 Open the panel with **Plugins › Geekatplay 3D Layers › 3D Layers**. The same menu also has **Edit 3D Layer (Pose & Light)…** and **Check for Updates…**.
+
+The first time, the **Create** tab shows a **Getting started** card (pick a service, generate from a layer, place and re-pose) with buttons to open Settings or this guide. **Hide** removes it for good.
 
 ## 2. Set up your services
 
 Open the panel's **Settings** tab. Each service has a section with its options and a **Test connection** button, which confirms the key or address works and shows your balance.
 
+<img src="images/ui-settings.png" width="280" alt="Settings tab with the Meshy section and a successful connection test">
+
 API keys can be typed or pasted with the clipboard button next to the field. Ctrl/Cmd+V does not work inside docked panels because Photoshop keeps that shortcut for itself. Keys are saved in `credentials.json` in your user-data folder (see section 10). They are never written to the log or to `settings.json`, and they survive updates.
 
 ### Meshy
-- **API key:** from meshy.ai → Settings → API (`msy_…`). Creating tasks requires a paid Meshy plan.
+- **API key:** from [meshy.ai → Developers → API Keys](https://www.meshy.ai/developers/keys) (`msy_…`). Creating tasks through the API requires a paid Meshy plan.
 - **AI model:** `latest` (currently Meshy 7.1), `meshy-7.1`, `meshy-6`, `meshy-6-lite`. Use **…** to type any other model id.
 - **Geometry detail:** standard / 2k / 4k (2k and 4k need meshy-7.1 or latest).
 - **Texture size:** 2k / 4k / 8k.
@@ -29,12 +33,12 @@ API keys can be typed or pasted with the clipboard button next to the field. Ctr
 - **Download deadline:** Meshy keeps generated files for **3 days**. The plugin downloads them as soon as a job finishes, but use **Browse** to import older Meshy tasks before they expire.
 
 ### Tripo
-- **API key:** from platform.tripo3d.ai → API keys (`tsk_…`). The plugin uses Tripo's **API v3**; Tripo shuts down API v2 on 2026-11-01.
+- **API key:** from [platform.tripo3d.ai → API keys](https://platform.tripo3d.ai/api-keys) (`tsk_…`). The plugin uses Tripo's **API v3**; Tripo shuts down API v2 on 2026-11-01.
 - **Model version:** `v3.1-20260211` (default), `v3.0-20250812`, `v2.5-20250123`, `P1-20260311`.
 - **Other options:** texture and geometry quality, PBR, smart low-poly, face limit, real-world size, orientation.
 
 ### Hitem3D (hi3d.ai)
-- **Credentials:** an **Access Key** and **Secret Key** from hitem3d.ai. You can also paste `AK:SK` into the first field, or a bearer token. The plugin signs in and refreshes the token itself. The **App ID** is optional.
+- **Credentials:** an **Access Key** and **Secret Key** that you create in your [hitem3d.ai](https://www.hitem3d.ai) account ([how](https://docs.hi3d.ai/en/api/getting-started/introduction)). You can also paste `AK:SK` into the first field, or a bearer token. The plugin signs in and refreshes the token itself. The **App ID** is optional.
 - **Model and resolution:** `hi3dv3.0` (2048quality/2048master), `hitem3dv2.1`, `hitem3dv2.0`, `hitem3dv1.5`, or the portrait models. The resolution list follows the chosen model.
 - **Other options:** geometry + texture or geometry only, face count (0 = Hitem3D default), PBR, and Hitem3D-side background removal.
 - **Download deadline:** Hitem3D links expire after **1 hour**; the plugin downloads results immediately.
@@ -55,7 +59,11 @@ API keys can be typed or pasted with the clipboard button next to the field. Ctr
    - *Active layer*
    - *Visible pixels in selection* (masked by the selection, so soft edges stay soft)
 3. Choose the **3D service** and optionally a name, then click **Generate 3D model**.
-4. The job appears under **Jobs** with progress. You can keep working or close the panel. Jobs resume after a Photoshop restart.
+4. The job appears under **Jobs** with progress.
+
+   <img src="images/ui-job.png" width="280" alt="A job in progress">
+
+   You can keep working or close the panel. Jobs resume after a Photoshop restart.
 5. When it says **Ready**, the model is in your library. Click **Pose & place** to open the editor; the result is placed over the original layer's area.
 
 Large layers are scaled down before upload (Settings › Generation › Max image size sent, default 2048 px). If a job fails, **Retry** resends the saved image, or downloads fresh links if the service had already finished.
@@ -63,6 +71,9 @@ Large layers are scaled down before upload (Settings › Generation › Max imag
 ## 4. Library
 
 The **Library** tab shows every model on this computer: generated, imported from Browse, or imported from a file (**Import GLB…** accepts `.glb` and self-contained `.gltf`).
+
+<img src="images/ui-library.png" width="280" alt="Library tab with model previews">
+
 - Click a card to see an interactive 3D preview and its details: service, size, task id.
 - Double-click a card, or use **Pose, light & place in document**, to place it in the active document.
 - **Favorite**, **Rename**, **Re-render preview**, **Delete**. Deleting a model doesn't change layers you already placed, but they can't be re-posed until the model is imported again.
@@ -71,6 +82,9 @@ The **Library** tab shows every model on this computer: generated, imported from
 ## 5. Browse your models on each service
 
 **Browse** → pick a service:
+
+<img src="images/ui-browse.png" width="280" alt="Browse tab listing models on a service">
+
 - **Meshy:** your image-to-3D, multi-image-to-3D and text-to-3D tasks made with this API key, newest first. Expired tasks (older than 3 days) can't be downloaded.
 - **Tripo:** built from your account's usage history, because Tripo has no "list my models" API.
 - **Hitem3D:** the tasks this plugin submitted (Hitem3D has no list API). Use **Track a task ID** for a task you started on the website or another computer.
@@ -79,6 +93,8 @@ The **Library** tab shows every model on this computer: generated, imported from
 **Import** downloads the model into your library; **In library · Place** places it.
 
 ## 6. The 3D pose & light editor
+
+![The 3D pose & light editor](images/ui-editor.jpg)
 
 | Area | Controls |
 |---|---|
@@ -110,16 +126,17 @@ The **detach** button (broken-chain icon) in the panel's 3D-layer banner removes
 
 The plugin checks the GitHub releases of `GeekatplayStudio/Photoshop-3D` when Photoshop starts, at most every 12 hours (Settings › Updates). When a newer version exists, a banner appears with **Update**:
 1. The plugin downloads `geekatplay-3d-layers-<version>.ccx` and checks it against the release's `SHA256SUMS.txt`.
-2. It opens the file with Creative Cloud's installer. Confirm if Creative Cloud asks.
-3. Photoshop reloads the plugin. Your library, settings and keys are kept.
+2. It asks Photoshop to open the file with Creative Cloud's installer. Photoshop shows **Request For Permission: The plugin Geekatplay 3D Layers wants to open …ccx**. Click **Allow**. If you click **Block**, nothing is installed; click **Update** again to get the question back.
+3. Creative Cloud asks you to confirm the install. Click **Install**.
+4. Photoshop reloads the plugin. Your library, settings and keys are kept.
 
 You can also check manually (**Check now**, or **Plugins › … › Check for Updates…**), skip a version, include pre-releases, or rerun the install script at any time.
 
 ## 9. Uninstall
 
-- Windows: run `uninstall-windows.cmd`, or `install-windows.ps1 -Uninstall`. Add `-RemoveData` to also delete your library and keys.
-- macOS: `bash uninstall-macos.command`. Add `--remove-data` to delete your data too.
-- Or remove it in the Creative Cloud app under **Stock & Marketplace › Plugins**.
+- Windows: double-click [`uninstall-windows.cmd`](https://github.com/GeekatplayStudio/Photoshop-3D/releases/latest/download/uninstall-windows.cmd), or run `install-windows.ps1 -Uninstall`. Add `-RemoveData` to also delete your library and keys.
+- macOS: `curl -fsSL https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-macos.command | bash -s -- --uninstall`, or `bash uninstall-macos.command`. Add `--remove-data` to delete your data too.
+- Or remove it in the Creative Cloud app's list of installed plugins (**Manage plugins**).
 
 ## 10. Files the plugin uses
 

@@ -2,8 +2,8 @@
  * Create: send the active layer / selection to a 3D service and follow the jobs.
  * Also the home of "Edit 3D layer" when the active layer is one of ours.
  */
-import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Box, CheckCircle2, Clock, ImageOff, Pencil, Play, RefreshCw, Send, Trash2, Unlink, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AlertTriangle, BookOpen, Box, CheckCircle2, Clock, ImageOff, KeyRound, Pencil, Play, RefreshCw, Send, Sparkles, Trash2, Unlink, X } from "lucide-react";
 import { PROVIDER_LABELS, type Job, type ProviderId, type SendSource } from "@shared/types";
 import { bridge } from "../bridge/client";
 import { Badge, Button, Empty, Field, ProgressBar, Section, Select, TextInput, timeAgo } from "../components/ui";
@@ -85,6 +85,42 @@ function JobCard({ job, onOpenLibrary }: { job: Job; onOpenLibrary: () => void }
     );
 }
 
+/** First-run help: three steps from install to a re-posable 3D layer. */
+function GettingStarted({ onOpenSettings }: { onOpenSettings: () => void }) {
+    const { info, run, setSettings } = usePanel();
+    const step = (n: number, body: ReactNode) => (
+        <li className="flex gap-2">
+            <span className="w-4 h-4 shrink-0 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-semibold">{n}</span>
+            <span className="leading-snug">{body}</span>
+        </li>
+    );
+    return (
+        <div className="p-2.5 rounded-md border border-primary/50 bg-primary/10 space-y-2 text-[11px]" data-testid="getting-started">
+            <div className="flex items-center gap-1.5 text-xs font-semibold">
+                <Sparkles size={13} className="text-primary" /> Getting started
+            </div>
+            <ol className="space-y-1.5">
+                {step(1, <>Pick a 3D service. <b>Meshy</b>, <b>Tripo</b> or <b>Hitem3D</b> need an account and an API key (add it in Settings). <b>ComfyUI</b> runs free on your own computer if you have it.</>)}
+                {step(2, <>Select a layer — an object on a transparent background works best — and press <b>Generate 3D model</b>.</>)}
+                {step(3, <>When it's ready, click <b>Pose &amp; place</b>. Later, <b>double-click the new layer</b> to change its pose and light.</>)}
+            </ol>
+            <div className="flex flex-wrap gap-1 pt-0.5">
+                <Button size="sm" variant="primary" icon={<KeyRound size={11} />} onClick={onOpenSettings}>
+                    Set up a service
+                </Button>
+                {info && (
+                    <Button size="sm" icon={<BookOpen size={11} />} onClick={() => void bridge().call("shell.openExternal", { url: `${info.repoUrl}/blob/main/docs/USER_GUIDE.md` })}>
+                        Read the guide
+                    </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => void run(async () => setSettings(await bridge().call("settings.update", { ui: { welcomeDismissed: true } })))}>
+                    Hide
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 export function CreateTab({ onOpenLibrary, onOpenSettings }: { onOpenLibrary: () => void; onOpenSettings: () => void }) {
     const { settings, providers, jobs, ps, run } = usePanel();
     const [provider, setProvider] = useState<ProviderId>(settings?.defaultProvider ?? "meshy");
@@ -140,6 +176,7 @@ export function CreateTab({ onOpenLibrary, onOpenSettings }: { onOpenLibrary: ()
 
     return (
         <div className="p-2 space-y-2">
+            {settings && !settings.ui.welcomeDismissed && <GettingStarted onOpenSettings={onOpenSettings} />}
             {ps?.is3DLayer && (
                 <div className="flex items-center gap-2 p-2 rounded-md border border-primary/50 bg-primary/10">
                     <Box size={16} className="text-primary shrink-0" />

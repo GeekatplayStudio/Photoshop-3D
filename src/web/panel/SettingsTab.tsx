@@ -164,7 +164,7 @@ export function SettingsTab() {
     return (
         <div className="p-2 space-y-2" data-testid="settings">
             <Section title="Meshy" defaultOpen={settings.defaultProvider === "meshy"} right={settings.secrets["meshy.apiKey"].set ? <Badge tone="success">Ready</Badge> : <Badge tone="warning">No key</Badge>}>
-                <SecretField label="API key" secretKey="meshy.apiKey" settings={settings} placeholder="msy_…" hint={<>From <Link href="https://www.meshy.ai/settings/api">meshy.ai → Settings → API</Link>. Kept in your user profile, never in logs.</>} />
+                <SecretField label="API key" secretKey="meshy.apiKey" settings={settings} placeholder="msy_…" hint={<>From <Link href="https://www.meshy.ai/developers/keys">meshy.ai → Developers → API Keys</Link>. Kept in your user profile, never in logs.</>} />
                 <Field label="AI model">
                     <ModelSelect value={m.aiModel} known={MESHY_AI_MODELS} onChange={(v) => set({ meshy: { aiModel: v } })} />
                 </Field>
@@ -229,7 +229,7 @@ export function SettingsTab() {
             </Section>
 
             <Section title="Hitem3D (hi3d.ai)" defaultOpen={settings.defaultProvider === "hitem3d"} right={settings.secrets["hitem3d.accessKey"].set ? <Badge tone="success">Ready</Badge> : <Badge tone="warning">No key</Badge>}>
-                <SecretField label="Access Key (or AK:SK, or a token)" secretKey="hitem3d.accessKey" settings={settings} hint={<>From <Link href="https://www.hitem3d.ai">hitem3d.ai</Link> → API. The plugin signs in and refreshes the token itself.</>} />
+                <SecretField label="Access Key (or AK:SK, or a token)" secretKey="hitem3d.accessKey" settings={settings} hint={<>Create an API key pair in your <Link href="https://www.hitem3d.ai">hitem3d.ai</Link> account (<Link href="https://docs.hi3d.ai/en/api/getting-started/introduction">how</Link>). The plugin signs in and refreshes the token itself.</>} />
                 <SecretField label="Secret Key" secretKey="hitem3d.secretKey" settings={settings} />
                 <Field label="App ID (optional)">
                     <CommitInput value={h.appId} onCommit={(v) => set({ hitem3d: { appId: v } })} />

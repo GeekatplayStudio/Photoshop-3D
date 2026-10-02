@@ -130,6 +130,10 @@ export type Settings = {
     library: {
         autoThumbnails: boolean;
     };
+    ui: {
+        /** The first-run "Getting started" card was closed. */
+        welcomeDismissed: boolean;
+    };
 };
 
 export const DEFAULT_REPO = "GeekatplayStudio/Photoshop-3D";
@@ -205,6 +209,9 @@ export const DEFAULT_SETTINGS: Settings = {
     library: {
         autoThumbnails: true,
     },
+    ui: {
+        welcomeDismissed: false,
+    },
 };
 
 export type DeepPartial<T> = T extends Array<unknown> ? T : T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
@@ -269,6 +276,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     const e = isObj(r.editor) ? r.editor : {};
     const u = isObj(r.updates) ? r.updates : {};
     const l = isObj(r.library) ? r.library : {};
+    const ui = isObj(r.ui) ? r.ui : {};
 
     const hModel = oneOf(h.model, HITEM3D_MODELS as unknown as string[], d.hitem3d.model);
     const hRes = HITEM3D_RESOLUTIONS[hModel].includes(h.resolution as string) ? (h.resolution as string) : HITEM3D_DEFAULT_RESOLUTION[hModel];
@@ -346,6 +354,9 @@ export function sanitizeSettings(raw: unknown): Settings {
         },
         library: {
             autoThumbnails: bool(l.autoThumbnails, d.library.autoThumbnails),
+        },
+        ui: {
+            welcomeDismissed: bool(ui.welcomeDismissed, d.ui.welcomeDismissed),
         },
     };
 }

@@ -4,14 +4,20 @@ First look at the log: **Settings › Diagnostics › Show recent log** (or `log
 
 ## Installing
 
+The [install guide](INSTALL.md) has the simple version of this table.
+
 | Symptom | Fix |
 |---|---|
-| `UPIA was not found` | Install or update the Creative Cloud desktop app; it provides Adobe's plugin installer. Or double-click the `.ccx`. |
-| `Failed to install, status = -204` | The file is not a valid `.ccx` (truncated download, or re-zipped by hand). Download it again from the release. |
-| `status = -411` | No compatible Photoshop: version 26.0 (Photoshop 2025) or newer is required. |
-| Plugin not in the Plugins menu | Wait a few seconds after installing; if it still isn't there, restart Photoshop. `install-windows.ps1` / `install-macos.command` print whether UPIA lists the plugin. |
-| PowerShell refuses to run the script | Use `install-windows.cmd` (it starts PowerShell with `-ExecutionPolicy Bypass` for that one script), or `irm …/install-windows.ps1 \| iex`. |
-| macOS: "cannot be opened because it is from an unidentified developer" | Run it with `bash install-macos.command`, or use the `curl … \| bash` one-liner. |
+| Double-clicking the `.ccx` does nothing or opens another app | The Creative Cloud app handles `.ccx` files; open it once, or use the installer script ([Windows](INSTALL.md#on-windows), [Mac](INSTALL.md#on-a-mac)). |
+| *Adobe's plugin installer was not found* (older scripts: `UPIA was not found`) | Install or update the Creative Cloud desktop app; it provides Adobe's plugin installer (UPIA). Or double-click the `.ccx`. |
+| *not a valid plugin (status -204)* | The file is not a valid `.ccx` (truncated download, or re-zipped by hand). Run the installer again, or download the file again. |
+| *No compatible Photoshop found* (`status -411`) | Version 26.0 (Photoshop 2025) or newer is required. Update Photoshop, open it once, then try again. |
+| *Could not reach GitHub* | No internet, a proxy or firewall blocks `github.com` / `api.github.com`, or GitHub's rate limit (60 requests/hour per IP) was hit. Try later, or download the `.ccx` in your browser and double-click it. |
+| *The downloaded file is damaged (checksum mismatch)* | The download was corrupted on the way. Run the installer again. |
+| Plugin not in the Plugins menu | Wait a few seconds after installing; if it still isn't there, restart Photoshop. The installers print whether Adobe's installer lists the plugin. |
+| Windows: *Windows protected your PC* when opening `install-windows.cmd` | SmartScreen shows this for scripts from small publishers. Click **More info › Run anyway**, or use the PowerShell line instead. |
+| Windows: PowerShell refuses to run `install-windows.ps1` | Use `install-windows.cmd` (it starts PowerShell with `-ExecutionPolicy Bypass` for that one script), or `irm …/install-windows.ps1 \| iex`. |
+| macOS: *cannot be opened because it is from an unidentified developer* | Run it with `bash install-macos.command`, or use the `curl … \| bash` one-liner. |
 
 ## The panel
 | Symptom | Fix |
@@ -58,7 +64,8 @@ First look at the log: **Settings › Diagnostics › Show recent log** (or `log
 |---|---|
 | "Update check failed" | No internet, or GitHub rate limit (60 checks/hour per IP); try later. |
 | "The download is corrupted" | The checksum did not match; try again. |
-| Update did nothing | Creative Cloud may be waiting for you to confirm the install. Or run the install script, which always installs the latest release. |
+| *Photoshop did not open the installer … choose "Allow"* | You clicked **Block** (or closed) Photoshop's *Request For Permission* dialog. Click **Update** again and choose **Allow**. If you ticked *Remember my choice* with Block, use the [install guide](INSTALL.md) instead. |
+| Update did nothing | Creative Cloud may be waiting for you to confirm the install; look for its window. Or follow the [install guide](INSTALL.md), which always installs the latest release. |
 
 ## Reporting a problem
 Open an issue at https://github.com/GeekatplayStudio/Photoshop-3D/issues. Attach the recent log (Settings › Diagnostics); it contains no API keys.

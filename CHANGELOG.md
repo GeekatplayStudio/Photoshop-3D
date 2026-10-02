@@ -4,8 +4,16 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+### Added
+- **Getting started** card on the Create tab the first time the panel opens: pick a service, generate, place and re-pose, with buttons to open Settings or the guide. **Hide** dismisses it for good.
+- **Install guide** for non-technical users ([docs/INSTALL.md](docs/INSTALL.md)): download-and-double-click first, then the one-line installer, with pictures, updating, uninstalling and the common problems.
+- A rewritten README with crisp screenshots of every tab and of the 3D editor, a service comparison and a FAQ.
+
 ### Changed
+- `install-windows.cmd` and `uninstall-windows.cmd` now work on their own: if `install-windows.ps1` isn't next to them, they download it from GitHub. One file to download and double-click.
+- The installers explain problems in plain language (for example "No compatible Photoshop found…", "Could not reach GitHub…") and link to the help page. Pasting the PowerShell one-liner no longer closes the PowerShell window when something fails.
 - Updater: if Photoshop's "open file" prompt is blocked, the panel now explains how to finish the update (Install again → Allow, or run the install script) instead of showing "User denied.".
+- Settings: the Meshy key link goes straight to meshy.ai's API Keys page, and the Hitem3D hint links to its key instructions.
 
 ## [0.1.0] - 2026-10-02
 

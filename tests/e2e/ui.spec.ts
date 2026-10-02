@@ -38,6 +38,20 @@ test.describe("panel", () => {
         expect(errors).toEqual([]);
     });
 
+    test("shows the getting-started card until it is hidden", async ({ page }) => {
+        await page.goto("/panel.html");
+        const card = page.getByTestId("getting-started");
+        await expect(card).toBeVisible();
+        await card.getByRole("button", { name: "Set up a service" }).click();
+        await expect(page.getByTestId("settings")).toBeVisible();
+        await page.getByTestId("tab-create").click();
+        await card.getByRole("button", { name: "Hide" }).click();
+        await expect(card).toHaveCount(0);
+        await page.getByTestId("tab-settings").click();
+        await page.getByTestId("tab-create").click();
+        await expect(card).toHaveCount(0);
+    });
+
     test("browse lists remote models and imports one", async ({ page }) => {
         await page.goto("/panel.html");
         await page.getByTestId("tab-browse").click();

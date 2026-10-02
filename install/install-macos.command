@@ -22,7 +22,11 @@ UPIA="/Library/Application Support/Adobe/Adobe Desktop Common/RemoteComponents/U
 
 step() { printf '\n\033[36m==> %s\033[0m\n' "$1"; }
 info() { printf '    %s\n' "$1"; }
-fail() { printf '\n\033[31mERROR: %s\033[0m\n' "$1"; exit 1; }
+fail() {
+    printf '\n\033[31mPROBLEM: %s\033[0m\n' "$1"
+    printf '\nHelp: https://github.com/%s/blob/main/docs/INSTALL.md#something-went-wrong\n' "$REPO"
+    exit 1
+}
 
 UNINSTALL=0
 REMOVE_DATA=0
@@ -41,8 +45,8 @@ done
 echo "Geekatplay 3D Layers - Photoshop plugin installer"
 echo "https://github.com/$REPO"
 
-step "Looking for Adobe's plugin installer (UPIA)"
-[ -x "$UPIA" ] || fail "UPIA was not found. Install or update the Creative Cloud desktop app, then run this again. Alternatively double-click the .ccx file."
+step "Looking for Adobe's plugin installer (part of the Creative Cloud app)"
+[ -x "$UPIA" ] || fail "Adobe's plugin installer was not found. Open the Creative Cloud desktop app (install it from https://creativecloud.adobe.com/apps/download/creative-cloud if needed), make sure Photoshop is installed, then run this again."
 info "$UPIA"
 
 remove_all() {
@@ -78,27 +82,27 @@ fi
 if [ -z "$CCX" ]; then
     if [ -n "$VERSION" ]; then API="https://api.github.com/repos/$REPO/releases/tags/$VERSION"; else API="https://api.github.com/repos/$REPO/releases/latest"; fi
     info "Asking GitHub for the release: $API"
-    RELEASE_JSON="$(curl -fsSL -H "Accept: application/vnd.github+json" -H "User-Agent: geekatplay-3d-layers-installer" "$API")" || fail "Could not read the release from GitHub. Download the .ccx from https://github.com/$REPO/releases and run: bash install-macos.command <file.ccx>"
+    RELEASE_JSON="$(curl -fsSL -H "Accept: application/vnd.github+json" -H "User-Agent: geekatplay-3d-layers-installer" "$API")" || fail "Could not reach GitHub. Check your internet connection and try again. You can also download the .ccx from https://github.com/$REPO/releases and double-click it."
     CCX_URL="$(printf '%s' "$RELEASE_JSON" | grep -o '"browser_download_url": *"[^"]*geekatplay-3d-layers-[0-9][^"]*\.ccx"' | head -n 1 | sed 's/.*"\(https[^"]*\)"/\1/')"
     [ -n "$CCX_URL" ] || CCX_URL="$(printf '%s' "$RELEASE_JSON" | grep -o '"browser_download_url": *"[^"]*\.ccx"' | head -n 1 | sed 's/.*"\(https[^"]*\)"/\1/')"
-    [ -n "$CCX_URL" ] || fail "The release has no .ccx file."
+    [ -n "$CCX_URL" ] || fail "The latest release has no plugin file (.ccx)."
     SUMS_URL="$(printf '%s' "$RELEASE_JSON" | grep -o '"browser_download_url": *"[^"]*SHA256SUMS[^"]*"' | head -n 1 | sed 's/.*"\(https[^"]*\)"/\1/' || true)"
     TMP_DIR="$(mktemp -d -t geekatplay3d)"
     CCX="$TMP_DIR/$(basename "$CCX_URL")"
     info "Downloading $(basename "$CCX_URL")"
-    curl -fsSL -o "$CCX" "$CCX_URL" || fail "Download failed."
+    curl -fsSL -o "$CCX" "$CCX_URL" || fail "The download failed. Please try again."
     if [ -n "$SUMS_URL" ]; then
         EXPECTED="$(curl -fsSL "$SUMS_URL" | grep " $(basename "$CCX")\$" | head -n 1 | awk '{print $1}' | tr 'A-F' 'a-f')"
-        [ -n "$EXPECTED" ] || fail "SHA256SUMS.txt has no entry for $(basename "$CCX"); refusing to install."
+        [ -n "$EXPECTED" ] || fail "SHA256SUMS.txt has no entry for $(basename "$CCX"); not installing an unverified file."
         ACTUAL="$(shasum -a 256 "$CCX" | awk '{print $1}')"
-        [ "$EXPECTED" = "$ACTUAL" ] || fail "Checksum mismatch (expected $EXPECTED, got $ACTUAL). Run the installer again."
+        [ "$EXPECTED" = "$ACTUAL" ] || fail "The downloaded file is damaged (checksum mismatch). Please run the installer again."
         info "SHA-256 verified: $ACTUAL"
     else
         info "Warning: this release has no SHA256SUMS.txt; installing without checksum verification."
     fi
 fi
 
-[ -f "$CCX" ] || fail "Package not found: $CCX"
+[ -f "$CCX" ] || fail "Plugin file not found: $CCX"
 
 step "Removing any installed copy (your data stays in $DATA_FOLDER)"
 n=$(remove_all)
@@ -108,14 +112,17 @@ step "Installing $(basename "$CCX")"
 OUT="$("$UPIA" --install "$CCX" 2>&1 || true)"
 info "$OUT"
 echo "$OUT" | grep -q "Installation Successful" || {
-    echo "$OUT" | grep -q -- "-204" && fail "UPIA rejected the package (status -204: not a valid .ccx). Download it again."
-    echo "$OUT" | grep -q -- "-411" && fail "UPIA found no compatible Photoshop (needs Photoshop 2025 / v26 or newer)."
-    fail "Installation failed. See the output above, or double-click the .ccx to install it through Creative Cloud."
+    echo "$OUT" | grep -q -- "-204" && fail "Adobe's installer says the file is not a valid plugin (status -204). Please run the installer again to download a fresh copy."
+    echo "$OUT" | grep -q -- "-411" && fail "No compatible Photoshop found. This plugin needs Photoshop 2025 (version 26) or newer. Open Photoshop once, then try again."
+    fail "Adobe's installer could not install the plugin (see the message above). Try double-clicking the .ccx file instead: $CCX"
 }
 
 step "Checking that Photoshop has it registered"
-"$UPIA" --list all 2>&1 | grep "$PLUGIN_NAME" | sed 's/^/    /' || info "Warning: UPIA does not list the plugin yet; restart Photoshop if it does not appear."
+"$UPIA" --list all 2>&1 | grep "$PLUGIN_NAME" | sed 's/^/    /' || info "Adobe's installer does not list the plugin yet; restart Photoshop if it does not appear."
 
-printf '\n\033[32mInstalled. In Photoshop open: Plugins > Geekatplay 3D Layers > 3D Layers\033[0m\n'
+printf '\n\033[30;42m Installed! \033[0m\n\n'
+printf '\033[32m In Photoshop, open the menu:  Plugins > Geekatplay 3D Layers > 3D Layers\033[0m\n'
+echo " (If it is not there yet, restart Photoshop.)"
+echo
 echo "Your models, settings and API keys: $DATA_FOLDER"
 echo "The plugin checks GitHub for updates and offers them in its panel (Settings > Updates)."
