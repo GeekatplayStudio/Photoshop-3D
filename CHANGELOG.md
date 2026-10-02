@@ -4,6 +4,8 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-02
+
 ### Added
 - **Getting started** card on the Create tab the first time the panel opens: pick a service, generate, place and re-pose, with buttons to open Settings or the guide. **Hide** dismisses it for good.
 - **Install guide** for non-technical users ([docs/INSTALL.md](docs/INSTALL.md)): download-and-double-click first, then the one-line installer, with pictures, updating, uninstalling and the common problems.
