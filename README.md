@@ -23,6 +23,13 @@
 
 ![The 3D pose and light editor](docs/images/ui-editor.jpg)
 
+> **New in 0.1.3:**
+> - **Bring your own 3D models.** Import GLB, FBX, OBJ, USDZ, STL and more, with their textures, or drop files into the library's *Import* folder.
+> - **Up to date with every service:** Meshy Smart Topology, Tripo P2 and its v3.5 texture model, Hitem3D de-shading, and ComfyUI 0.38.
+> - **Fixes:** panel icons now show in collapsed docks, and **Show folder** works.
+>
+> [All changes](CHANGELOG.md)
+
 ## How it works
 
 1. **Select a layer** in Photoshop, such as an object on a transparent background, and click **Generate 3D model**. A 3D service turns it into a real 3D model.
@@ -30,6 +37,8 @@
 3. **Change it later.** **Double-click the layer** to reopen the 3D editor. Change the pose or light, click **Update Layer**, and the layer updates in place. Its position, size, masks and effects stay as they were.
 
 Every model is saved in a library on your computer, so you can use it again in any document without paying to generate it twice.
+
+**Already have 3D models?** You don't need a service to use the editor. Import your own files, such as a GLB from Blender, an FBX from a stock site or an OBJ with its textures, and pose and light them the same way.
 
 | Create | Your library | Browse your services | Settings |
 |:---:|:---:|:---:|:---:|
@@ -72,33 +81,39 @@ curl -fsSL https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/
 4. When the job says **Ready**, click **Pose & place**, set the pose and light, and click **Place in Document**.
 5. Later, **double-click the layer** to change it.
 
+**Using a model you already have?** Open the **Library** tab and click **Import files…** (or **Import folder…**). The model is added to your library; double-click it to place it.
+
 The [user guide](docs/USER_GUIDE.md) explains every option.
 
 ## Choose a 3D service
 
 You only need one. All of them return a textured model.
 
-| Service | Cost | What you need | Get started |
-|---|---|---|---|
-| **Meshy** | Uses Meshy credits (API access needs a paid plan) | An API key (`msy_…`) | [meshy.ai → API keys](https://www.meshy.ai/developers/keys) |
-| **Tripo** | Uses Tripo credits | An API key (`tsk_…`) | [platform.tripo3d.ai → API keys](https://platform.tripo3d.ai/api-keys) |
-| **Hitem3D** (hi3d.ai) | Uses Hitem3D credits | An Access Key and Secret Key | [hitem3d.ai](https://www.hitem3d.ai) ([how](https://docs.hi3d.ai/en/api/getting-started/introduction)) |
-| **ComfyUI** | Free; runs on your own computer | ComfyUI with TRELLIS.2 and a strong graphics card. About 5 minutes per model on an RTX 3090. | [Setup steps](docs/USER_GUIDE.md#comfyui-local-or-on-your-network) |
+| Service | Cost | What you need | Models | Get started |
+|---|---|---|---|---|
+| **Meshy** | Uses Meshy credits (API access needs a paid plan) | An API key (`msy_…`) | Meshy 7.1 (latest), Meshy 6, 6 Lite, **Smart Topology** (clean low-poly) | [meshy.ai → API keys](https://www.meshy.ai/developers/keys) |
+| **Tripo** | Uses Tripo credits | An API key (`tsk_…`) | v3.1 (latest), v3.0, v2.5, **P1 / P2** low-poly; texture model **v3.5** | [platform.tripo3d.ai → API keys](https://platform.tripo3d.ai/api-keys) |
+| **Hitem3D** (hi3d.ai) | Uses Hitem3D credits | An Access Key and Secret Key | hi3d v3.0 (latest), v2.1, v2.0, v1.5, portrait models | [platform.hi3d.ai → API Keys](https://platform.hi3d.ai/console/apiKey) ([how](https://docs.hi3d.ai/en/api/getting-started/quickstart)) |
+| **ComfyUI** | Free; runs on your own computer | ComfyUI 0.34+ with TRELLIS.2 and a strong graphics card. About 5 minutes per model on an RTX 3090. | TRELLIS.2 (built in), or your own workflow | [Setup steps](docs/USER_GUIDE.md#comfyui-local-or-on-your-network) |
 
-Keys are stored only on your computer. They are sent only to the service they belong to.
+Keys are stored only on your computer. They are sent only to the service they belong to. Every call is written to match the service's current API documentation and changelog. [Exactly what is sent](docs/PROVIDERS.md) lists the date each service was last checked.
 
 ## Features
 
 - **Send to 3D:** the active layer, or just the part inside your selection. Transparency is kept, so cut-out objects give the cleanest models. Jobs keep running if you close the panel, and they continue after a Photoshop restart.
 - **Browse your collections:** see the models you already made on Meshy, Tripo, Hitem3D or ComfyUI and import them with one click.
 - **Local library:** every model is downloaded once and stored on your computer, so it opens instantly and keeps working after the service's links expire. Previews are made automatically.
-- **Your own 3D files:** import GLB, glTF, FBX, OBJ, DAE, USDZ, 3DS, STL, PLY, 3MF and more, one file or a whole folder at a time. Textures come along and are packed into the library. Or copy files into the library's *Import* folder, and they are added by themselves.
+- **Your own 3D files:** import GLB, glTF, FBX, OBJ, DAE, USDZ, 3DS, STL, PLY, 3MF and more, one file or a whole folder at a time.
+  - Textures come along and are packed into the library.
+  - Or copy files into the library's *Import* folder, and they are added by themselves.
+  - **Show folder** opens the library in File Explorer / Finder.
 - **3D pose & light editor:**
   - Light presets (Studio, Golden Hour, Noon, Dramatic, Rim, Soft, Moonlight), a sun you can drag, and color temperature.
   - Environments, cast and contact shadows, camera views and field of view.
   - Exports up to 8192 px.
 - **Re-posable layers:** the render is a smart object. Its pose and lighting are saved inside your PSD, so you can change them any time, even after closing and reopening the file.
 - **Your own ComfyUI workflows:** use the built-in TRELLIS.2 workflow or any image-to-3D workflow you export from ComfyUI.
+- **Kind to busy services:** when a service says "too busy, wait", the plugin waits as long as it asks and carries on by itself. If a service announces it is retiring something the plugin uses, the log says so.
 - **Automatic updates** from this GitHub page. Every download is checked against a published checksum.
 
 ## Questions
@@ -126,9 +141,20 @@ There is no tracking or analytics. Every request is written to a log you can rea
 </details>
 
 <details>
+<summary><b>Can I use 3D models I already have?</b></summary>
+
+Yes. In the **Library** tab:
+- **Import files…** adds one or more files.
+- **Import folder…** adds every 3D file in a folder.
+- Or click **Import folder** under the buttons and copy files into the folder that opens. They are added while the Library tab is open.
+
+Supported formats: GLB, glTF, FBX, OBJ (with its .mtl), DAE, USDZ/USD, 3DS, STL, PLY, 3MF, AMF, VRML and VOX. Each is converted to GLB with its textures, as long as they are next to the model or in a subfolder. Your original files are not changed.
+</details>
+
+<details>
 <summary><b>Where are my models? Can I use them in other programs?</b></summary>
 
-In a folder on your computer: **Library › Show folder** opens it. Each model is a normal `.glb` file that works in Blender, game engines and most other 3D apps.
+In a folder on your computer: **Library › Show folder** opens it (the first time, Photoshop asks for permission; click **Allow**). Each model is a normal `.glb` file that works in Blender, game engines and most other 3D apps.
 
 - **Windows:** `%APPDATA%\Geekatplay\3D Layers`
 - **Mac:** `~/Library/Application Support/Geekatplay/3D Layers`
