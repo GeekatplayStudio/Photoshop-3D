@@ -1,0 +1,14 @@
+# Normalise text files to LF in the repository.
+* text=auto eol=lf
+# Windows scripts must keep CRLF or cmd.exe misreads them.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+# macOS/Linux scripts must stay LF.
+*.command text eol=lf
+*.sh text eol=lf
+# Binaries.
+*.png binary
+*.glb binary
+*.ccx binary
+*.zip binary

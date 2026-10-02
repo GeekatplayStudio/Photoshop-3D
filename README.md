@@ -1,1 +1,0 @@
-# Photoshop-3D

@@ -1,0 +1,53 @@
+{
+    "manifestVersion": 5,
+    "id": "com.geekatplay.photoshop3d",
+    "name": "Geekatplay 3D Layers",
+    "version": "0.0.0",
+    "main": "index.html",
+    "host": {
+        "app": "PS",
+        "minVersion": "26.0.0"
+    },
+    "entrypoints": [
+        {
+            "type": "panel",
+            "id": "threeDLayers",
+            "label": { "default": "3D Layers" },
+            "minimumSize": { "width": 260, "height": 320 },
+            "maximumSize": { "width": 2000, "height": 4000 },
+            "preferredDockedSize": { "width": 320, "height": 680 },
+            "preferredFloatingSize": { "width": 380, "height": 760 },
+            "icons": [
+                { "width": 23, "height": 23, "path": "icons/panel-dark.png", "scale": [1, 2], "theme": ["darkest", "dark", "medium"] },
+                { "width": 23, "height": 23, "path": "icons/panel-light.png", "scale": [1, 2], "theme": ["lightest", "light"] }
+            ]
+        },
+        {
+            "type": "command",
+            "id": "editThreeDLayer",
+            "label": { "default": "Edit 3D Layer (Pose & Light)…" }
+        },
+        {
+            "type": "command",
+            "id": "checkForUpdates",
+            "label": { "default": "Check for Updates…" }
+        }
+    ],
+    "icons": [
+        { "width": 48, "height": 48, "path": "icons/plugin.png", "scale": [1, 2], "theme": ["all"], "species": ["pluginList"] }
+    ],
+    "requiredPermissions": {
+        "network": { "domains": "all" },
+        "localFileSystem": "fullAccess",
+        "webview": {
+            "allow": "yes",
+            "domains": "all",
+            "allowLocalRendering": "yes",
+            "enableMessageBridge": "localAndRemote"
+        },
+        "launchProcess": {
+            "schemes": ["https"],
+            "extensions": [".ccx", ".log", ".glb", ".gltf"]
+        }
+    }
+}

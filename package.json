@@ -1,0 +1,58 @@
+{
+  "name": "geekatplay-3d-layers",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Photoshop UXP plugin: turn layers into 3D models (Meshy, Tripo, Hitem3D, ComfyUI), keep a local model library, and place posed + relit renders as re-editable layers.",
+  "author": "Geekatplay Studio",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GeekatplayStudio/Photoshop-3D.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev:web": "vite --config vite.config.ts",
+    "build": "node scripts/build.mjs",
+    "build:web": "vite build --config vite.config.ts",
+    "package": "node scripts/package-ccx.mjs",
+    "dist": "node scripts/build.mjs && node scripts/package-ccx.mjs",
+    "dev:install": "node scripts/build.mjs && node scripts/package-ccx.mjs && node scripts/dev-install.mjs",
+    "uninstall:local": "node scripts/dev-install.mjs --remove",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "verify": "npm run typecheck && npm test && npm run dist && node scripts/verify-package.mjs",
+    "release": "node scripts/release.mjs"
+  },
+  "dependencies": {
+    "@pmndrs/assets": "^1.7.0",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.5.0",
+    "fflate": "^0.8.2",
+    "lucide-react": "^0.562.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "^0.185.1",
+    "three-stdlib": "^2.36.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/three": "^0.185.4",
+    "@vitejs/plugin-react": "^6.1.1",
+    "esbuild": "^0.28.2",
+    "jsdom": "^26.1.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}
