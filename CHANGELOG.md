@@ -4,6 +4,10 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+### Changed
+- The installers' final check names each Photoshop version that has the plugin (for example "Photoshop 2026 (27.10.0): version 0.1.1") instead of printing Adobe's raw list.
+- Docs: a sharp screenshot of the Plugins menu.
+
 ## [0.1.1] - 2026-10-02
 
 ### Added

@@ -168,9 +168,15 @@ function Main {
     }
 
     Step "Checking that Photoshop sees it"
+    # UPIA lists plugins per installed app ("3 extensions installed for Photoshop 2026 64 (ver 27.10.0)").
     $list = Invoke-Upia @("/list", "all")
-    $found = ($list -split "`n") | Where-Object { $_ -match [regex]::Escape($PluginName) }
-    if ($found) { $found | ForEach-Object { Info $_.Trim() } } else { Warn "Not listed yet. If the plugin does not appear in Photoshop, restart Photoshop." }
+    $app = ""
+    $found = @()
+    foreach ($line in ($list -split "`r?`n")) {
+        if ($line -match "installed for (.+?)(?: 64)? \(ver ([\d.]+)\)") { $app = "$($Matches[1]) ($($Matches[2]))"; continue }
+        if ($line -match "$([regex]::Escape($PluginName))\s+(\S+)\s*$") { $found += "${app}: version $($Matches[1])" }
+    }
+    if ($found) { $found | ForEach-Object { Info $_ } } else { Warn "Not listed yet. If the plugin does not appear in Photoshop, restart Photoshop." }
 
     Write-Host ""
     Write-Host " Installed! " -ForegroundColor Black -BackgroundColor Green

@@ -26,7 +26,7 @@ Your browser saves a file called `geekatplay-3d-layers.ccx`, usually in your **D
 
 **4. Open it in Photoshop.** In the Photoshop menu bar choose **Plugins › Geekatplay 3D Layers › 3D Layers**.
 
-![Plugins menu › Geekatplay 3D Layers › 3D Layers](images/plugins-menu.jpg)
+![Plugins menu › Geekatplay 3D Layers › 3D Layers](images/plugins-menu.png)
 
 The **3D Layers** panel opens. You can dock it next to your other panels.
 

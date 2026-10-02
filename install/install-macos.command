@@ -118,7 +118,11 @@ echo "$OUT" | grep -q "Installation Successful" || {
 }
 
 step "Checking that Photoshop has it registered"
-"$UPIA" --list all 2>&1 | grep "$PLUGIN_NAME" | sed 's/^/    /' || info "Adobe's installer does not list the plugin yet; restart Photoshop if it does not appear."
+# UPIA lists plugins per installed app ("3 extensions installed for Photoshop 2026 (ver 27.10.0)").
+LISTED="$( ("$UPIA" --list all 2>&1 || true) | awk -v name="$PLUGIN_NAME" '
+    /installed for/ { app = $0; sub(/.*installed for /, "", app); sub(/ 64 \(ver /, " (", app); sub(/ \(ver /, " (", app) }
+    index($0, name) && !/installed for/ { n = split($0, f, " "); print "    " app ": version " f[n] }')"
+if [ -n "$LISTED" ]; then echo "$LISTED"; else info "Adobe's installer does not list the plugin yet; restart Photoshop if it does not appear."; fi
 
 printf '\n\033[30;42m Installed! \033[0m\n\n'
 printf '\033[32m In Photoshop, open the menu:  Plugins > Geekatplay 3D Layers > 3D Layers\033[0m\n'

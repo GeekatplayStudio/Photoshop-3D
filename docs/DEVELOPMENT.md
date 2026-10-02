@@ -53,4 +53,4 @@ npm install
 DOCS_MODEL="$APPDATA/Geekatplay/3D Layers/library/<id>/model.glb" DOCS_MODEL_NAME="Viking axe" DOCS_TURN=-75 npm run docs:screenshots
 ```
 
-`DOCS_ONLY=editor` renders just the editor; `DOCS_PRESET` picks the light preset (default *Golden Hour*). The Photoshop screenshots (`plugins-menu.jpg`, `update-permission.jpg`, `photoshop-layer.jpg`) are captured by hand.
+`DOCS_ONLY=editor` renders just the editor; `DOCS_PRESET` picks the light preset (default *Golden Hour*). The Photoshop screenshots (`plugins-menu.png`, `update-permission.jpg`, `photoshop-layer.jpg`) are captured by hand.

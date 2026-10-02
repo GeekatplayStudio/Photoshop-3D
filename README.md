@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/GeekatplayStudio/Photoshop-3D/releases/latest/download/geekatplay-3d-layers.ccx"><img src="https://img.shields.io/badge/Download-for%20Photoshop-2680eb?style=for-the-badge&logo=adobephotoshop&logoColor=white" alt="Download for Photoshop"></a>
+  <a href="https://github.com/GeekatplayStudio/Photoshop-3D/releases/latest/download/geekatplay-3d-layers.ccx"><img src="https://img.shields.io/badge/Download-for%20Photoshop-2680eb?style=for-the-badge" alt="Download for Photoshop"></a>
 </p>
 
 <p align="center">
