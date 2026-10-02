@@ -54,11 +54,18 @@ export function validateManifest(manifest, files) {
     for (const ep of manifest.entrypoints ?? []) {
         if (ep.type === "panel" && !Array.isArray(ep.icons)) problems.push(`panel ${ep.id} has no icons`);
     }
-    const iconPaths = [...(manifest.icons ?? []), ...(manifest.entrypoints ?? []).flatMap((e) => e.icons ?? [])].map((i) => i.path);
-    for (const p of iconPaths) {
-        if (!has(p)) problems.push(`icon file missing: ${p}`);
-        const at2 = p.replace(/\.png$/, "@2x.png");
-        if (!has(at2)) problems.push(`icon file missing: ${at2}`);
+    // The manifest names "icons/x.png"; Photoshop loads "x@1x.png" / "x@2x.png" for each scale.
+    // On Windows a 1x file without "@1x" is not found, so the panel's dock icon stays blank.
+    const icons = [...(manifest.icons ?? []), ...(manifest.entrypoints ?? []).flatMap((e) => e.icons ?? [])];
+    for (const icon of icons) {
+        if (/@\d+(\.\d+)?x\.png$/.test(icon.path)) problems.push(`icon path ${icon.path} must not include the @Nx suffix (name the files that way instead)`);
+        for (const scale of icon.scale ?? [1]) {
+            const file = icon.path.replace(/\.png$/, `@${scale}x.png`);
+            if (!has(file)) problems.push(`icon file missing: ${file}`);
+        }
+    }
+    for (const ep of manifest.entrypoints ?? []) {
+        if (ep.type === "panel" && (ep.icons ?? []).some((i) => !i.species?.includes("chrome"))) problems.push(`panel ${ep.id} icons need "species": ["chrome"] to show in docks`);
     }
     for (const required of ["index.html", "host.js", "manifest.json", "build-info.json", "web/panel.html", "web/editor.html"]) {
         if (!has(required)) problems.push(`required file missing: ${required}`);

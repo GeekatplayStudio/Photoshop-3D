@@ -17,10 +17,64 @@ export class HttpError extends Error {
         readonly status: number,
         readonly body: unknown,
         readonly url: string,
+        /** How long the service asked us to wait (Retry-After / X-RateLimit-Reset), if it said. */
+        readonly retryAfterMs?: number,
     ) {
         super(message);
         this.name = "HttpError";
     }
+}
+
+type HeaderBag = { get(name: string): string | null } | undefined;
+const header = (headers: HeaderBag, name: string): string | null => {
+    try {
+        return headers?.get(name) ?? null;
+    } catch {
+        return null;
+    }
+};
+
+/**
+ * Milliseconds the service asked us to wait: `Retry-After` (seconds or an HTTP date, sent by
+ * Meshy and Tripo with 429) or `X-RateLimit-Reset` (seconds, or epoch seconds/milliseconds).
+ */
+export function retryAfterMs(headers: HeaderBag, now = Date.now()): number | undefined {
+    const retryAfter = header(headers, "retry-after");
+    if (retryAfter) {
+        const seconds = Number(retryAfter);
+        if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+        const at = Date.parse(retryAfter);
+        if (!Number.isNaN(at)) return Math.max(0, at - now);
+    }
+    const reset = Number(header(headers, "x-ratelimit-reset") ?? NaN);
+    if (Number.isFinite(reset)) return Math.max(0, reset > 1e12 ? reset - now : reset > 1e9 ? reset * 1000 - now : reset * 1000);
+    return undefined;
+}
+
+/** Endpoints a service has marked deprecated; each is logged once per session. */
+const reportedDeprecations = new Set<string>();
+
+/**
+ * Services announce retirements with a `Deprecation` header (RFC 9745; Meshy sends it with a
+ * `Link` to the migration notes). Logging it means a retirement shows up in the log long
+ * before the endpoint stops working.
+ */
+function reportDeprecation(headers: HeaderBag, label: string, method: string, url: string, log?: Logger) {
+    const deprecation = header(headers, "deprecation");
+    if (!deprecation || !log) return;
+    let path = url;
+    try {
+        const u = new URL(url);
+        path = `${u.host}${u.pathname}`;
+    } catch {
+        // keep the raw URL
+    }
+    const key = `${method} ${path}`;
+    if (reportedDeprecations.has(key)) return;
+    reportedDeprecations.add(key);
+    const link = header(headers, "link");
+    const sunset = header(headers, "sunset");
+    log.warn(`${label}: the service marked ${method} ${path} as deprecated (Deprecation: ${deprecation}${sunset ? `; Sunset: ${sunset}` : ""}${link ? `; ${link}` : ""}). Please report this at https://github.com/GeekatplayStudio/Photoshop-3D/issues so the plugin can be updated.`);
 }
 
 export type RequestOptions = {
@@ -71,11 +125,30 @@ export async function requestJson<T = unknown>(fetchFn: FetchLike, url: string, 
         // non-JSON body (HTML error page, plain text)
     }
     log?.debug(`${label} ${method} ${url} → ${res.status} in ${Date.now() - started} ms`, typeof body === "string" ? body.slice(0, 300) : body);
+    reportDeprecation(res.headers, label, method, url, log);
     if (!res.ok) {
         const detail = errorMessageFrom(body) ?? res.statusText;
-        throw new HttpError(`${label} error ${res.status}${detail ? `: ${detail}` : ""}`, res.status, body, url);
+        const wait = retryAfterMs(res.headers);
+        throw new HttpError(`${label} error ${res.status}${detail ? `: ${detail}` : ""}${errorExtras(body, detail, res.status)}`, res.status, body, url, wait);
     }
     return body as T;
+}
+
+/**
+ * The parts of an error body worth showing besides the message: the service's own error
+ * code, its suggestion, and the request id its support asks for (Tripo sends all three).
+ */
+export function errorExtras(body: unknown, shown: string | undefined, status: number): string {
+    if (!body || typeof body !== "object") return "";
+    const b = body as Record<string, unknown>;
+    const text = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : typeof v === "number" ? String(v) : undefined);
+    const suggestion = text(b.suggestion);
+    const code = text(b.code);
+    const requestId = text(b.request_id) ?? text(b.requestId) ?? text(b.trace_id);
+    const parts: string[] = [];
+    if (code && code !== "0" && code !== String(status)) parts.push(`code ${code}`);
+    if (requestId) parts.push(`request ${requestId}`);
+    return `${suggestion && suggestion !== shown ? ` (${suggestion})` : ""}${parts.length ? ` [${parts.join(", ")}]` : ""}`;
 }
 
 export type DownloadOptions = {

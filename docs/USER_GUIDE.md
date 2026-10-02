@@ -26,27 +26,37 @@ API keys can be typed or pasted with the clipboard button next to the field. Ctr
 
 ### Meshy
 - **API key:** from [meshy.ai → Developers → API Keys](https://www.meshy.ai/developers/keys) (`msy_…`). Creating tasks through the API requires a paid Meshy plan.
-- **AI model:** `latest` (currently Meshy 7.1), `meshy-7.1`, `meshy-6`, `meshy-6-lite`. Use **…** to type any other model id.
+- **AI model:** `latest` (currently Meshy 7.1), `meshy-7.1`, `meshy-6`, `meshy-6-lite`, or `meshy-t2` (**Smart Topology**: a clean low-poly mesh of 100–15,000 faces). Use **…** to type any other model id. If your settings name a model Meshy has retired (for example `meshy-5` or `meshy-7`), the plugin switches to its successor.
 - **Geometry detail:** standard / 2k / 4k (2k and 4k need meshy-7.1 or latest).
 - **Texture size:** 2k / 4k / 8k.
-- **Other options:** PBR maps, remove lighting (meshy-6), image enhancement, and remesh (topology and target polycount).
+- **Other options:** PBR maps, remove lighting (meshy-6), image enhancement, and remesh (topology and target polycount). With Smart Topology, only texturing, PBR and the target polycount apply.
+- **Previews:** Meshy renders a transparent preview, which the library uses.
 - **Download deadline:** Meshy keeps generated files for **3 days**. The plugin downloads them as soon as a job finishes, but use **Browse** to import older Meshy tasks before they expire.
 
 ### Tripo
 - **API key:** from [platform.tripo3d.ai → API keys](https://platform.tripo3d.ai/api-keys) (`tsk_…`). The plugin uses Tripo's **API v3**; Tripo shuts down API v2 on 2026-11-01.
-- **Model version:** `v3.1-20260211` (default), `v3.0-20250812`, `v2.5-20250123`, `P1-20260311`.
-- **Other options:** texture and geometry quality, PBR, smart low-poly, face limit, real-world size, orientation.
+- **Model version:** `v3.1-20260211` (default, Tripo's latest), `v3.0-20250812`, `v2.5-20250123`, and the low-poly P series `P1-20260311` and `P2-20260801` (preview).
+- **Texture model:** Tripo's default, or `v3.5-20260815` (newest; adds **Fast** texture quality and **Remove lighting from the photo**), `v3.0-20250812`, `v2.5-20250123`.
+- **Other options:** texture and geometry quality, PBR, smart low-poly, face limit, real-world size, orientation. Options a model doesn't support are hidden. The face limit is kept within the model's range: up to 1.5 million for v3.1 (2 million with detailed geometry), 500,000 for v2.5, 20,000 for P1 and 50,000 for P2.
+- **Image size:** Tripo accepts images up to 20 MB.
 
 ### Hitem3D (hi3d.ai)
-- **Credentials:** an **Access Key** and **Secret Key** that you create in your [hitem3d.ai](https://www.hitem3d.ai) account ([how](https://docs.hi3d.ai/en/api/getting-started/introduction)). You can also paste `AK:SK` into the first field, or a bearer token. The plugin signs in and refreshes the token itself. The **App ID** is optional.
+- **Credentials:** an **Access Key** and **Secret Key** that you create at [platform.hi3d.ai → API Keys](https://platform.hi3d.ai/console/apiKey) ([how](https://docs.hi3d.ai/en/api/getting-started/quickstart)). You can also paste `AK:SK` into the first field, or a bearer token. The plugin signs in and refreshes the token itself. The **App ID** is optional.
 - **Model and resolution:** `hi3dv3.0` (2048quality/2048master), `hitem3dv2.1`, `hitem3dv2.0`, `hitem3dv1.5`, or the portrait models. The resolution list follows the chosen model.
-- **Other options:** geometry + texture or geometry only, face count (0 = Hitem3D default), PBR, and Hitem3D-side background removal.
+- **Other options:** geometry + texture or geometry only, face count (0 = Hitem3D default), PBR, Hitem3D-side background removal, and **Remove lighting from the photo** (de-shading strength 0–1, default 0.5; v2.0, v2.1 and v3.0 models).
+- **Image size:** Hitem3D accepts images up to 20 MB. Error codes are explained in plain language (for example "the face count is outside the range Hitem3D accepts").
 - **Download deadline:** Hitem3D links expire after **1 hour**; the plugin downloads results immediately.
 
 ### ComfyUI (local or on your network)
 - **Server address:** for example `http://127.0.0.1:8188`, or another machine's IP if ComfyUI was started with `--listen`.
 - **Workflow:**
-  - **TRELLIS.2 (built in):** needs ComfyUI with the native TRELLIS.2 nodes (ComfyUI 0.3x or newer) and these model files: `trellis_2_int8_convrot.safetensors` (diffusion_models), `trellis_2_shape_vae_bf16.safetensors` and `trellis_2_texture_vae_bf16.safetensors` (vae), `dino_v3_L_naf_fp32.safetensors` (clip_vision), and `birefnet.safetensors` (background removal). The easiest way to get them is to open ComfyUI's template **"Pixal3D & TRELLIS.2: Image to Model"**, which offers to download them. **Test connection** lists anything missing. A model takes about 4–5 minutes on an RTX 3090.
+  - **TRELLIS.2 (built in):** needs ComfyUI 0.34 or newer, with the native TRELLIS.2 nodes, and these model files:
+    - `trellis_2_int8_convrot.safetensors` (diffusion_models)
+    - `trellis_2_shape_vae_bf16.safetensors` and `trellis_2_texture_vae_bf16.safetensors` (vae)
+    - `dino_v3_L_naf_fp32.safetensors` (clip_vision)
+    - `birefnet.safetensors` (background removal; only needed for images without transparency)
+
+    The easiest way to get them is to open ComfyUI's template **"Pixal3D & TRELLIS.2: Image to Model"**, which offers to download them. The plugin also uses these files from a subfolder, or the documented alternatives (`trellis_2_bf16.safetensors`, `dino_v3_vit_l.safetensors`). **Test connection** lists anything missing. A model takes about 4–5 minutes on an RTX 3090.
   - **Object mask:** *Use layer transparency* (default) cuts the object out exactly where your layer is transparent. Opaque images go through BiRefNet background removal. *Always remove background* runs BiRefNet on everything.
   - **Custom workflow:** export your workflow from ComfyUI with **Workflow › Export (API)** and choose the file. It needs a **Load Image** node, which receives the layer, and a node that saves a `.glb` (for example **Save GLB**). If the workflow has several Load Image nodes, pick the right one in Settings.
 - **Seed, texture size, max faces, timeout:** apply to the built-in workflow; seed −1 means random.

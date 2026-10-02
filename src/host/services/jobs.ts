@@ -4,8 +4,9 @@
  * Jobs persist in <data folder>/jobs.json, so closing the panel or restarting
  * Photoshop never loses a running generation: on load, active jobs resume polling.
  * Polling starts every 2 s and backs off ×1.5 up to 15 s while nothing changes;
- * transient errors (network, 5xx, 429) are retried with longer waits, other 4xx fail
- * the job immediately. The layer pixels that were sent are kept in jobs/<id>/source.png
+ * transient errors (network, 5xx) are retried with longer waits, other 4xx fail the job
+ * immediately. A rate limit (429) waits as long as the service asks (Retry-After) and does
+ * not count as an error; a submission that hits one is retried a few times. The layer pixels that were sent are kept in jobs/<id>/source.png
  * until the job finishes, so a failed submission can be retried without Photoshop.
  */
 import { newId } from "@shared/bytes";
@@ -25,6 +26,8 @@ const MAX_DELAY = 15_000;
 const MAX_POLL_ERRORS = 6;
 const MAX_CONCURRENT_POLLS = 3;
 const KEEP_FINISHED = 100;
+const SUBMIT_ATTEMPTS = 4;
+const MAX_RATE_LIMIT_WAIT = 5 * 60_000;
 
 export type JobDeps = {
     store: FileStore;
@@ -37,6 +40,8 @@ export type JobDeps = {
     now?: () => number;
     /** Tick interval; tests drive `tick()` directly and pass 0. */
     tickMs?: number;
+    /** Waits between submission attempts; tests pass an instant one. */
+    sleep?: (ms: number) => Promise<void>;
 };
 
 export type StartInput = {
@@ -57,6 +62,8 @@ export function isTransient(err: unknown): boolean {
     if (err instanceof HttpError) return err.status === 408 || err.status === 429 || err.status >= 500;
     return true;
 }
+
+const isRateLimit = (err: unknown): err is HttpError => err instanceof HttpError && err.status === 429;
 
 export class JobManager {
     private jobs: Job[] = [];
@@ -142,7 +149,7 @@ export class JobManager {
             const input = (job.meta?.input ?? {}) as { width?: number; height?: number; hasAlpha?: boolean };
             this.patch(job, { status: "submitting", message: `Sending to ${provider.label}`, error: undefined, progress: 0 });
             this.deps.log.info(`Job ${job.id}: submitting "${job.name}" to ${provider.label} (${image.byteLength} bytes)`);
-            const res = await provider.submit(this.deps.context(), { image, width: input.width ?? 0, height: input.height ?? 0, hasAlpha: !!input.hasAlpha, name: job.name });
+            const res = await this.submitWithRetry(job, provider, { image, width: input.width ?? 0, height: input.height ?? 0, hasAlpha: !!input.hasAlpha, name: job.name });
             this.patch(job, {
                 remoteId: res.remoteId,
                 status: "running",
@@ -159,6 +166,21 @@ export class JobManager {
         } finally {
             this.busy.delete(job.id);
             this.ensureTimer();
+        }
+    }
+
+    /** Submits, waiting and retrying when the service answers 429 (busy / too many tasks at once). */
+    private async submitWithRetry(job: Job, provider: ProviderAdapter, input: Parameters<ProviderAdapter["submit"]>[1]) {
+        for (let attempt = 1; ; attempt++) {
+            try {
+                return await provider.submit(this.deps.context(), input);
+            } catch (err) {
+                if (!isRateLimit(err) || attempt >= SUBMIT_ATTEMPTS) throw err;
+                const wait = Math.min(MAX_RATE_LIMIT_WAIT, Math.max(5_000, err.retryAfterMs ?? 15_000 * attempt));
+                this.deps.log.warn(`Job ${job.id}: ${provider.label} rate limit on submit (attempt ${attempt}/${SUBMIT_ATTEMPTS}); retrying in ${wait} ms`, err.message);
+                this.patch(job, { message: `${provider.label} is busy; trying again in ${Math.round(wait / 1000)} s` });
+                await (this.deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms))))(wait);
+            }
         }
     }
 
@@ -195,6 +217,12 @@ export class JobManager {
             const delay = advanced ? MIN_DELAY : Math.min(MAX_DELAY, Math.round((job.pollDelayMs ?? MIN_DELAY) * 1.5));
             this.patch(job, { status: res.state, progress, message: res.message, meta, pollErrors: 0, pollDelayMs: delay, nextPollAt: this.now() + delay });
         } catch (err) {
+            if (isRateLimit(err)) {
+                const delay = Math.min(MAX_RATE_LIMIT_WAIT, Math.max(err.retryAfterMs ?? 0, (job.pollDelayMs ?? MIN_DELAY) * 2));
+                this.deps.log.warn(`Job ${job.id}: ${provider.label} rate limit while polling; next check in ${delay} ms`, err.message);
+                this.patch(job, { pollDelayMs: delay, nextPollAt: this.now() + delay, message: `${provider.label} asked to slow down; checking again in ${Math.round(delay / 1000)} s` });
+                return;
+            }
             const errors = (job.pollErrors ?? 0) + 1;
             if (!isTransient(err) || errors >= MAX_POLL_ERRORS) return this.fail(job, err, "poll");
             const delay = Math.min(60_000, (job.pollDelayMs ?? MIN_DELAY) * 2);

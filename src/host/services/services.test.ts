@@ -79,7 +79,7 @@ describe("library", () => {
 });
 
 /** A provider whose poll answers come from a script. */
-function fakeProvider(polls: (PollResult | Error)[], opts: { submitError?: Error; cancel?: boolean } = {}): ProviderAdapter & { submitted: number; cancelled: string[] } {
+function fakeProvider(polls: (PollResult | Error)[], opts: { submitError?: Error; submitErrors?: Error[]; cancel?: boolean } = {}): ProviderAdapter & { submitted: number; cancelled: string[] } {
     const p = {
         id: "meshy" as const,
         label: "Fake",
@@ -95,6 +95,8 @@ function fakeProvider(polls: (PollResult | Error)[], opts: { submitError?: Error
         async submit() {
             p.submitted++;
             if (opts.submitError) throw opts.submitError;
+            const once = opts.submitErrors?.shift();
+            if (once) throw once;
             return { remoteId: `r${p.submitted}`, meta: { kind: "image-to-3d" } };
         },
         async poll() {
@@ -126,8 +128,10 @@ function jobSetup(provider: ProviderAdapter, files: Record<string, Uint8Array> =
         route("GET", /\.png$/, () => bytes(PNG_1PX)),
         route("GET", /expired/, () => new Response("no", { status: 403 })),
     ]);
-    const jobs = new JobManager({ store, log, library, history, fetch, provider: () => provider, context: () => context(fetch), now: () => now, tickMs: 0 });
-    return { store, log, library, history, jobs, fetch, advance: (ms: number) => (now += ms) };
+    const sleeps: number[] = [];
+    const sleep = async (ms: number) => void sleeps.push(ms);
+    const jobs = new JobManager({ store, log, library, history, fetch, provider: () => provider, context: () => context(fetch), now: () => now, tickMs: 0, sleep });
+    return { store, log, library, history, jobs, fetch, sleeps, advance: (ms: number) => (now += ms) };
 }
 
 const startInput = { providerId: "meshy" as const, image: PNG_1PX, width: 1, height: 1, hasAlpha: true, name: "Chair" };
@@ -187,6 +191,33 @@ describe("job manager", () => {
         s.advance(60_000);
         await s.jobs.tick();
         expect(s.jobs.get(job.id)).toMatchObject({ status: "failed", error: "Unauthorized" });
+    });
+
+    it("waits out a rate limit on submit for as long as the service asks", async () => {
+        const provider = fakeProvider([], { submitErrors: [new HttpError("Tripo error 429: concurrency limit", 429, null, "u", 7000)] });
+        const s = jobSetup(provider);
+        const job = await s.jobs.start(startInput);
+        await flush();
+        await flush();
+        expect(s.sleeps).toEqual([7000]);
+        expect(s.jobs.get(job.id)).toMatchObject({ status: "running", remoteId: "r2" });
+    });
+
+    it("slows polling down on a rate limit without counting it as an error", async () => {
+        const provider = fakeProvider([new HttpError("Meshy error 429", 429, null, "u", 30_000), { state: "running", progress: 20 }]);
+        const s = jobSetup(provider);
+        const job = await s.jobs.start(startInput);
+        await flush();
+        s.advance(5000);
+        await s.jobs.tick();
+        const waiting = s.jobs.get(job.id)!;
+        expect(waiting.status).toBe("running");
+        expect(waiting.pollErrors ?? 0).toBe(0);
+        expect(waiting.pollDelayMs).toBe(30_000);
+        expect(waiting.message).toMatch(/slow down/);
+        s.advance(31_000);
+        await s.jobs.tick();
+        expect(s.jobs.get(job.id)).toMatchObject({ status: "running", progress: 20 });
     });
 
     it("retries a failed submission from the saved source image", async () => {

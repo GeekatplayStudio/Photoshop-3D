@@ -19,8 +19,15 @@ export type SecretKey = (typeof SECRET_KEYS)[number];
  * The Settings tab also accepts any other id, so a new provider model never needs
  * a plugin update to be usable.
  */
-export const MESHY_AI_MODELS = ["latest", "meshy-7.1", "meshy-6", "meshy-6-lite"] as const;
-export const TRIPO_MODEL_VERSIONS = ["v3.1-20260211", "v3.0-20250812", "v2.5-20250123", "P1-20260311"] as const;
+export const MESHY_AI_MODELS = ["latest", "meshy-7.1", "meshy-6", "meshy-6-lite", "meshy-t2"] as const;
+/** Meshy's Smart Topology model: clean low-poly topology, 100–15,000 faces. */
+export const MESHY_SMART_TOPOLOGY_MODEL = "meshy-t2";
+/** Retired or deprecated Meshy ids and their successors (Meshy changelog, Sep 2026). */
+export const MESHY_MODEL_SUCCESSORS: Record<string, string> = { "meshy-7": "meshy-7.1", "meshy-5": "meshy-6-lite", "meshy-4": "latest", "meshy-t1": "meshy-t2" };
+export const TRIPO_MODEL_VERSIONS = ["v3.1-20260211", "v3.0-20250812", "v2.5-20250123", "P1-20260311", "P2-20260801"] as const;
+/** Tripo texture models; v3.5 is the newest (Tripo changelog, Sep 2026). "" = Tripo's default for the model. */
+export const TRIPO_TEXTURE_VERSIONS = ["v3.5-20260815", "v3.0-20250812", "v2.5-20250123"] as const;
+export const TRIPO_TEXTURE_V35 = "v3.5-20260815";
 export const HITEM3D_MODELS = ["hi3dv3.0", "hitem3dv2.1", "hitem3dv2.0", "hitem3dv1.5", "scene-portraitv2.1", "scene-portraitv2.0", "scene-portraitv1.5"] as const;
 
 /** Allowed Hitem3D resolutions per model (docs.hitem3d.ai create-task). */
@@ -69,7 +76,12 @@ export type Settings = {
         model: string;
         texture: boolean;
         pbr: boolean;
-        textureQuality: "standard" | "detailed" | "extreme";
+        /** "fast" needs the v3.5 texture model. */
+        textureQuality: "fast" | "standard" | "detailed" | "extreme";
+        /** Texture model; "" = Tripo's default for the chosen model. */
+        textureVersion: "" | (typeof TRIPO_TEXTURE_VERSIONS)[number];
+        /** v3.5 texture model only: remove the lighting baked into the photo before texturing. */
+        delight: boolean;
         geometryQuality: "standard" | "detailed";
         /** 0 = provider default. */
         faceLimit: number;
@@ -90,6 +102,8 @@ export type Settings = {
         pbr: boolean;
         /** Let Hitem3D remove the background before generating. */
         removeBackground: boolean;
+        /** De-shading strength 0–1 (v2.0, v2.1, v3.0 models); Hitem3D's default is 0.5. */
+        shading: number;
     };
     comfyui: {
         url: string;
@@ -160,6 +174,8 @@ export const DEFAULT_SETTINGS: Settings = {
         texture: true,
         pbr: true,
         textureQuality: "standard",
+        textureVersion: "",
+        delight: true,
         geometryQuality: "standard",
         faceLimit: 0,
         smartLowPoly: false,
@@ -175,6 +191,7 @@ export const DEFAULT_SETTINGS: Settings = {
         face: 0,
         pbr: true,
         removeBackground: true,
+        shading: 0.5,
     },
     comfyui: {
         url: "http://127.0.0.1:8188",
@@ -281,6 +298,9 @@ export function sanitizeSettings(raw: unknown): Settings {
     const hModel = oneOf(h.model, HITEM3D_MODELS as unknown as string[], d.hitem3d.model);
     const hRes = HITEM3D_RESOLUTIONS[hModel].includes(h.resolution as string) ? (h.resolution as string) : HITEM3D_DEFAULT_RESOLUTION[hModel];
     const hFace = int(h.face, 0, 0, 5_000_000);
+    const meshyModel = typeof m.aiModel === "string" && m.aiModel.trim() ? m.aiModel.trim() : d.meshy.aiModel;
+    const tripoTextureVersion = oneOf(t.textureVersion, ["", ...TRIPO_TEXTURE_VERSIONS] as const, d.tripo.textureVersion);
+    const tripoTextureQuality = oneOf(t.textureQuality, ["fast", "standard", "detailed", "extreme"] as const, d.tripo.textureQuality);
 
     const workflow = isObj(c.customWorkflow) ? c.customWorkflow : null;
 
@@ -289,7 +309,7 @@ export function sanitizeSettings(raw: unknown): Settings {
         defaultProvider: oneOf(r.defaultProvider, PROVIDER_IDS, d.defaultProvider),
         meshy: {
             baseUrl: normalizeUrl(m.baseUrl, d.meshy.baseUrl),
-            aiModel: typeof m.aiModel === "string" && m.aiModel.trim() ? m.aiModel.trim() : d.meshy.aiModel,
+            aiModel: MESHY_MODEL_SUCCESSORS[meshyModel] ?? meshyModel,
             geometryResolution: oneOf(m.geometryResolution, ["standard", "2k", "4k"] as const, d.meshy.geometryResolution),
             textureResolution: oneOf(m.textureResolution, ["2k", "4k", "8k"] as const, d.meshy.textureResolution),
             shouldTexture: bool(m.shouldTexture, d.meshy.shouldTexture),
@@ -305,7 +325,10 @@ export function sanitizeSettings(raw: unknown): Settings {
             model: typeof t.model === "string" && t.model.trim() ? t.model.trim() : d.tripo.model,
             texture: bool(t.texture, d.tripo.texture),
             pbr: bool(t.pbr, d.tripo.pbr),
-            textureQuality: oneOf(t.textureQuality, ["standard", "detailed", "extreme"] as const, d.tripo.textureQuality),
+            // "fast" exists only on the v3.5 texture model (Tripo answers 1004 otherwise).
+            textureQuality: tripoTextureQuality === "fast" && tripoTextureVersion !== TRIPO_TEXTURE_V35 ? "standard" : tripoTextureQuality,
+            textureVersion: tripoTextureVersion,
+            delight: bool(t.delight, d.tripo.delight),
             geometryQuality: oneOf(t.geometryQuality, ["standard", "detailed"] as const, d.tripo.geometryQuality),
             faceLimit: int(t.faceLimit, 0, 0, 2_000_000),
             smartLowPoly: bool(t.smartLowPoly, d.tripo.smartLowPoly),
@@ -321,6 +344,7 @@ export function sanitizeSettings(raw: unknown): Settings {
             face: hFace === 0 ? 0 : Math.max(100_000, hFace),
             pbr: bool(h.pbr, d.hitem3d.pbr),
             removeBackground: bool(h.removeBackground, d.hitem3d.removeBackground),
+            shading: Math.round(num(h.shading, d.hitem3d.shading, 0, 1) * 10) / 10,
         },
         comfyui: {
             url: normalizeUrl(c.url, d.comfyui.url),

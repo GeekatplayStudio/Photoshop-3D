@@ -1,5 +1,6 @@
 /**
- * Hitem3D / Hi3D (https://docs.hitem3d.ai) — open-api v1.
+ * Hitem3D / Hi3D (https://docs.hi3d.ai, changelog: /en/api/api-reference/changelog) — open-api v1.
+ * The API host is still api.hitem3d.ai; keys are created at platform.hi3d.ai.
  *
  * Auth: the Access Key + Secret Key are exchanged for a bearer token:
  *   POST /auth/token with "Authorization: Basic base64(AK:SK)" → data.accessToken, data.tokenType.
@@ -7,8 +8,9 @@
  * "login expired" (Hitem3D reports errors as HTTP 200 with a non-200 `code`).
  * A single value without ":" is used directly as a bearer token.
  *
- * - Create: POST /submit-task (multipart): images, request_type, model, resolution, format=2 (GLB —
- *           the API's own default is OBJ), face, pbr, rmbg → data.task_id
+ * - Create: POST /submit-task (multipart): images (PNG/JPEG/WebP, ≤ 20 MB), request_type, model,
+ *           resolution, format=2 (GLB — the API's own default is OBJ), face, pbr, rmbg, shading
+ *           (de-shading strength, Aug 2026) → data.task_id
  * - Poll:   GET  /query-task?task_id= → data.state created|queueing|processing|success|failed,
  *           data.url (model) and data.cover_url, both valid for 1 hour.
  * - Browse: there is no list endpoint; the plugin's own task history is shown instead.
@@ -51,18 +53,32 @@ export function isExpiredTokenResponse(body: unknown): boolean {
     return code === "401" || code === "403" || /login expired|token expired|invalid token/i.test(msg);
 }
 
+/** Plain-language meaning of Hitem3D's documented error codes (API reference, Sep 2026). */
+export const HITEM3D_ERRORS: Record<string, string> = {
+    "40010000": "the Access Key / Secret Key were rejected",
+    "30010000": "your Hitem3D balance is too low",
+    "50010001": "generation failed (credits refunded)",
+    "10000000": "Hitem3D had an internal error; try again later",
+    "10031001": "the image is larger than Hitem3D's 20 MB limit",
+    "10031002": "the face count is outside the range Hitem3D accepts (Settings → Hitem3D → Face count)",
+    "10031003": "this resolution is not available for the chosen model",
+    "10031005": "Hitem3D accepts only PNG, JPEG and WebP images",
+    "10031006": "Hitem3D does not know this model",
+    "10031010": "the image arrived empty",
+    "10031017": "this model cannot texture an existing mesh",
+};
+
+/** Hitem3D's upload limit per image. */
+export const HITEM3D_MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
 /** Throws for a non-success Hitem3D envelope; returns `data`. */
 function unwrap(body: unknown, what: string): Record<string, unknown> {
     const b = obj(body);
     const code = b.code;
     if (code !== undefined && code !== null && String(code) !== "200" && String(code) !== "0") {
         const msg = str(b.msg) ?? str(b.message) ?? `code ${String(code)}`;
-        const known: Record<string, string> = {
-            "40010000": "the Access Key / Secret Key were rejected",
-            "30010000": "your Hitem3D balance is too low",
-            "50010001": "generation failed (credits refunded)",
-        };
-        throw new Error(`Hitem3D ${what} failed: ${known[String(code)] ?? msg}`);
+        const known = HITEM3D_ERRORS[String(code)];
+        throw new Error(`Hitem3D ${what} failed: ${known ? `${known} (${msg})` : msg} [code ${String(code)}]`);
     }
     return obj(b.data);
 }
@@ -125,6 +141,8 @@ export function buildSubmitFields(settings: ProviderContext["settings"]["hitem3d
     };
     if (settings.face > 0) fields.face = String(settings.face);
     if (hitem3dSupportsPbr(settings.model) && settings.requestType !== "1") fields.pbr = settings.pbr ? "1" : "0";
+    // De-shading (v2.0, v2.1, v3.0). Only sent when changed from Hitem3D's default of 0.5.
+    if (hitem3dSupportsPbr(settings.model) && settings.requestType !== "1" && settings.shading !== 0.5) fields.shading = settings.shading.toFixed(1);
     return fields;
 }
 
@@ -164,6 +182,9 @@ export const hitem3d: ProviderAdapter = {
     },
 
     async submit(ctx, input) {
+        if (input.image.byteLength > HITEM3D_MAX_UPLOAD_BYTES) {
+            throw new Error(`The image is ${Math.round(input.image.byteLength / 1e6)} MB; Hitem3D accepts up to 20 MB. Lower Settings → Generation → Max image size, or crop the layer.`);
+        }
         const fields = buildSubmitFields(ctx.settings.hitem3d);
         const form = multipartBody([{ name: "images", value: input.image, filename: "image.png", contentType: "image/png" }, ...Object.entries(fields).map(([name, value]) => ({ name, value }))]);
         const data = await call(ctx, "/submit-task", { method: "POST", body: bodyOf(form.body), contentType: form.contentType, timeoutMs: 180_000 }, "task creation");

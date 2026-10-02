@@ -1,10 +1,11 @@
 /**
  * ComfyUI workflows for image → 3D, as pure functions (no I/O) so they are unit-tested.
  *
- * Built-in: TRELLIS.2 (ComfyUI ≥ 0.3x native nodes). The graph is the Comfy-Org template
+ * Built-in: TRELLIS.2 (native nodes, ComfyUI ≥ 0.34). The graph is the Comfy-Org template
  * "3d_pixal3d_trellis2_image_to_model" reduced to its TRELLIS.2 branch, with the template's
- * Save3DAdvanced (a frontend-only widget node) replaced by core SaveGLB. Verified on
- * ComfyUI 0.38 / RTX 3090: ~4.5 min, ~30 MB textured GLB.
+ * Save3DAdvanced (whose required viewport_state comes from the frontend's 3D viewer) replaced
+ * by core SaveGLB. Node names and inputs were checked against ComfyUI 0.38's /object_info and
+ * the template on 2026-10-02. Verified on ComfyUI 0.38 / RTX 3090: ~4.5 min, ~30 MB textured GLB.
  *
  * Custom: any API-format workflow (ComfyUI → Workflow → Export (API)) with a LoadImage node
  * and a node that saves a .glb/.gltf (SaveGLB, Save3DAdvanced, or a custom node).
@@ -32,6 +33,25 @@ export const TRELLIS2_MODEL_FILES = {
     backgroundRemoval: "birefnet.safetensors",
 } as const;
 
+/** Accepted substitutes when the template's file is not installed (docs.comfy.org TRELLIS.2 tutorial). */
+export const TRELLIS2_MODEL_ALTERNATIVES: Partial<Record<keyof typeof TRELLIS2_MODEL_FILES, RegExp>> = {
+    unet: /^trellis_2(?!.*vae).*\.safetensors$/i,
+    clipVision: /^dino_v3.*\.safetensors$/i,
+    backgroundRemoval: /\.safetensors$/i,
+};
+
+export type Trellis2Files = { -readonly [K in keyof typeof TRELLIS2_MODEL_FILES]: string };
+
+/**
+ * Picks the installed file for a model slot from a loader's options: the expected name (also
+ * inside a subfolder, e.g. "trellis/trellis_2_int8_convrot.safetensors"), else an accepted
+ * alternative. Undefined when neither is installed.
+ */
+export function pickModelFile(options: readonly string[], preferred: string, alternative?: RegExp): string | undefined {
+    const base = (o: string) => o.split(/[\\/]/).pop() ?? o;
+    return options.find((o) => o === preferred) ?? options.find((o) => base(o) === preferred) ?? (alternative ? options.find((o) => alternative.test(base(o))) : undefined);
+}
+
 export const TRELLIS2_IMAGE_NODE = "122";
 const SAVE_NODE = "900";
 
@@ -44,10 +64,12 @@ export type Trellis2Options = {
     faceCount: number;
     seed: number;
     filenamePrefix?: string;
+    /** Installed model files (see pickModelFile); defaults to the template's names. */
+    files?: Partial<Trellis2Files>;
 };
 
 export function buildTrellis2Workflow(o: Trellis2Options): ApiWorkflow {
-    const f = TRELLIS2_MODEL_FILES;
+    const f: Trellis2Files = { ...TRELLIS2_MODEL_FILES, ...o.files };
     const seed = (offset: number) => (o.seed + offset) % 2 ** 48;
     const wf: ApiWorkflow = {
         "122": { class_type: "LoadImage", _meta: { title: "Photoshop Image" }, inputs: { image: o.image } },

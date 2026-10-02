@@ -22,6 +22,7 @@ The [install guide](INSTALL.md) has the simple version of this table.
 ## The panel
 | Symptom | Fix |
 |---|---|
+| The panel's icon is empty when it is collapsed in a dock | Fixed in 0.1.2. Update, then restart Photoshop once (Photoshop reads dock icons at startup). |
 | Blank panel or "could not start" | Check the log. Panel pages are copied to the UXP data folder on first start; deleting `%APPDATA%\Adobe\UXP\PluginsStorage\PHSP\<version>\External\com.geekatplay.photoshop3d\PluginData\web` forces a fresh copy. |
 | Ctrl/Cmd+V doesn't paste | Photoshop keeps that shortcut. Use the 📋 button next to the field. |
 | "Layer … is empty" | The active layer has no pixels; select another layer or make a selection. |
@@ -35,7 +36,10 @@ The [install guide](INSTALL.md) has the simple version of this table.
 | Tripo `401 Authentication required` | Wrong or revoked key. The plugin uses Tripo API **v3**; a v2-only key also works. |
 | Tripo `code 2010` | Not enough credits. |
 | Hitem3D "the Access Key / Secret Key were rejected" | Re-enter both, or paste `AK:SK` into the first field. |
-| Hitem3D "balance is too low" | Top up on hitem3d.ai. |
+| Hitem3D "balance is too low" | Top up on hi3d.ai. |
+| "… is busy; trying again in N s" / "asked to slow down" | The service's rate limit (for example Tripo's 10 tasks at once). The plugin waits as long as the service asks and carries on by itself. |
+| "The image is N MB; … accepts up to 20 MB" | Lower **Settings › Generation › Max image size sent**, or crop the layer. |
+| A warning in the log: "the service marked … as deprecated" | The service has announced it will retire an endpoint the plugin uses. Please [open an issue](https://github.com/GeekatplayStudio/Photoshop-3D/issues) so the plugin can be updated before it stops working. |
 | A finished job fails at "Downloading model" with HTTP 403 | The provider link expired. Click **Retry**: the plugin asks the service for fresh links. Meshy deletes files after 3 days. |
 | "The service returned a ZIP archive" | Choose GLB output for that service (the plugin always requests GLB from Meshy/Tripo/Hitem3D; custom ComfyUI workflows must save `.glb`). |
 
@@ -45,6 +49,7 @@ The [install guide](INSTALL.md) has the simple version of this table.
 | "Cannot reach ComfyUI at …" | Start ComfyUI; check the address in Settings. For another machine, start ComfyUI with `--listen` and use its IP. |
 | "TRELLIS.2 is not ready: update ComfyUI (missing nodes …)" | Update ComfyUI (TRELLIS.2 nodes are built into recent versions). |
 | "… download model files: …" | Open ComfyUI's template **Pixal3D & TRELLIS.2: Image to Model**; it offers to download the models. |
+| "… the background-removal model (birefnet.safetensors) is not installed" | The layer has no transparency, so ComfyUI must cut the object out. Cut it out on a transparent layer, or install BiRefNet (the template above downloads it). |
 | "The workflow finished but saved no .glb file" | Add a **Save GLB** node to your custom workflow. |
 | "This is a regular saved workflow" | In ComfyUI use **Workflow › Export (API)** and choose that file. |
 | Job fails with "ComfyUI no longer knows this job" | ComfyUI was restarted while the job was queued; click **Retry**. |

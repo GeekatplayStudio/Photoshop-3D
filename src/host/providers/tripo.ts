@@ -4,15 +4,19 @@
  * Tripo's V2 API (api.tripo3d.ai/v2/openapi) stops accepting requests on
  * 2026-11-01, so this adapter targets V3 (https://openapi.tripo3d.ai/v3):
  *
- * - Upload: POST /files (multipart "file") → data.file_token. V3 rejects data URIs.
+ * - Upload: POST /files (multipart "file", PNG/JPEG/WebP up to 20 MB) → data.file_token. V3 rejects data URIs.
  * - Create: POST /generation/image-to-model { input: file_token, model, texture, pbr, … } → data.task_id
+ *           H series (v3.1, v3.0, v2.5) and P series (P1, P2 preview); texture_version picks the
+ *           texture model (v3.5 adds texture_quality "fast" and delight).
  * - Poll:   GET  /tasks/{id} → data.status queued|running|success|failed|cancelled (banned/expired
  *           are reported as failed), data.progress, data.output.model_url / rendered_image_url.
  * - Browse: Tripo has no "list my models" endpoint. GET /account/usage (limit/offset) lists the
  *           account's tasks; POST /tasks/list { task_ids } fetches their details and fresh URLs.
  * - Test:   GET  /account/balance → data.balance / data.frozen (decimals).
- * There is no cancel endpoint.
+ * There is no cancel endpoint. A 429 (too many tasks at once) carries Retry-After, which the
+ * job queue honours. Unknown task statuses count as failed, as Tripo's v3 migration guide asks.
  */
+import { TRIPO_TEXTURE_V35 } from "@shared/settings";
 import type { RemoteItem, RemoteStatus } from "@shared/types";
 import { bodyOf, multipartBody, requestJson } from "../platform/http";
 import { formatFromUrl, obj, str, toEpochMs, toPercent, type ModelResult, type PollResult, type ProviderAdapter, type ProviderContext } from "./types";
@@ -27,35 +31,65 @@ async function auth(ctx: ProviderContext): Promise<Record<string, string>> {
 
 const base = (ctx: ProviderContext) => ctx.settings.tripo.baseUrl;
 
-/** Unwraps { code: 0, data } and turns a non-zero code into an error. */
-function unwrap(body: unknown, what: string): Record<string, unknown> {
+/** Tripo's upload limit for /files. */
+export const TRIPO_MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
+/** Returns the `data` of a { code, data } envelope; a non-zero code becomes an error. */
+function payload(body: unknown, what: string): unknown {
     const b = obj(body);
     if (typeof b.code === "number" && b.code !== 0) {
         const msg = str(b.message) ?? str(b.msg) ?? `code ${b.code}`;
         const hint = str(b.suggestion);
-        throw new Error(`Tripo ${what} failed: ${msg}${hint ? ` (${hint})` : ""}`);
+        const requestId = str(b.request_id);
+        throw new Error(`Tripo ${what} failed: ${msg}${hint ? ` (${hint})` : ""} [code ${b.code}${requestId ? `, request ${requestId}` : ""}]`);
     }
-    return obj(b.data ?? b);
+    return b.data ?? body;
+}
+const unwrap = (body: unknown, what: string): Record<string, unknown> => obj(payload(body, what));
+
+/**
+ * Documented face_limit range for a model and mode (image-to-model H series and P series
+ * pages). Values outside it are answered with error 1004, so they are clamped here.
+ */
+export function tripoFaceLimitRange(model: string, opts: { geometryQuality: string; smartLowPoly: boolean }): [number, number] | null {
+    if (/^P1-/i.test(model)) return [50, 20_000];
+    if (/^P2-/i.test(model)) return [50, 50_000];
+    if (opts.smartLowPoly) return [500, 20_000];
+    if (/^v3\.1-/.test(model)) return [1, opts.geometryQuality === "detailed" ? 2_000_000 : 1_500_000];
+    if (/^v3\.0-/.test(model)) return [1, opts.geometryQuality === "detailed" ? 2_000_000 : 1_000_000];
+    if (/^v2\.5-/.test(model)) return [1, 500_000];
+    return null;
 }
 
-/** Request body for image-to-model from the user's settings (only documented fields). */
+/** Request body for image-to-model from the user's settings (only documented fields, per model). */
 export function buildImageToModelBody(settings: ProviderContext["settings"]["tripo"], fileToken: string): Record<string, unknown> {
     const model = settings.model;
-    const isV3 = /^v3\./.test(model);
     const isP = /^P\d/i.test(model);
+    // geometry_quality, smart_low_poly and auto_size are valid only for H-series models ≥ v3.0.
+    const isV3 = /^v3\./.test(model) && !isP;
+    const textured = settings.texture || settings.pbr;
     const body: Record<string, unknown> = {
         input: fileToken,
         model,
-        texture: settings.texture || settings.pbr,
+        texture: textured,
         pbr: settings.pbr,
-        auto_size: settings.autoSize,
         orientation: settings.orientation,
     };
-    if (settings.texture || settings.pbr) body.texture_quality = settings.textureQuality;
-    if (settings.faceLimit > 0) body.face_limit = settings.faceLimit;
-    if (isV3 && !isP) {
+    if (isV3) body.auto_size = settings.autoSize;
+    if (textured) {
+        body.texture_quality = settings.textureQuality;
+        if (settings.textureVersion && !isP) body.texture_version = settings.textureVersion;
+        // "fast" only exists on the v3.5 texture model; delight is read only by v3.5.
+        if (settings.textureQuality === "fast" && !isP) body.texture_version = TRIPO_TEXTURE_V35;
+        if (body.texture_version === TRIPO_TEXTURE_V35) body.delight = settings.delight;
+    }
+    if (isV3) {
         body.geometry_quality = settings.geometryQuality;
         if (settings.smartLowPoly) body.smart_low_poly = true;
+    }
+    if (settings.faceLimit > 0) {
+        const range = tripoFaceLimitRange(model, { geometryQuality: isV3 ? settings.geometryQuality : "standard", smartLowPoly: isV3 && settings.smartLowPoly });
+        body.face_limit = range ? Math.min(range[1], Math.max(range[0], settings.faceLimit)) : settings.faceLimit;
     }
     return body;
 }
@@ -141,6 +175,9 @@ export const tripo: ProviderAdapter = {
     },
 
     async submit(ctx, input) {
+        if (input.image.byteLength > TRIPO_MAX_UPLOAD_BYTES) {
+            throw new Error(`The image is ${Math.round(input.image.byteLength / 1e6)} MB; Tripo accepts up to 20 MB. Lower Settings → Generation → Max image size, or crop the layer.`);
+        }
         const h = await auth(ctx);
         const form = multipartBody([{ name: "file", value: input.image, filename: "image.png", contentType: "image/png" }]);
         const uploaded = unwrap(
@@ -181,7 +218,8 @@ export const tripo: ProviderAdapter = {
             case "running":
                 return { state: "running", progress, message: "Tripo is generating" };
             default:
-                return { state: "running", progress, message: `Tripo status: ${String(task.status ?? "unknown")}` };
+                // Tripo's v3 migration guide: treat any unrecognised status as failed.
+                return { state: "failed", error: `Tripo reported an unknown task status "${String(task.status ?? "")}".` };
         }
     },
 
@@ -189,8 +227,8 @@ export const tripo: ProviderAdapter = {
         const h = await auth(ctx);
         const limit = Math.max(1, Math.min(200, pageSize));
         const offset = (Math.max(1, page) - 1) * limit;
-        const usage = await requestJson(ctx.fetch, `${base(ctx)}/account/usage?limit=${limit}&offset=${offset}`, { headers: h, label: "Tripo", timeoutMs: 30_000 }, ctx.log);
-        const rows = usageRows(obj(usage).data ?? usage);
+        const usage = payload(await requestJson(ctx.fetch, `${base(ctx)}/account/usage?limit=${limit}&offset=${offset}`, { headers: h, label: "Tripo", timeoutMs: 30_000 }, ctx.log), "usage history");
+        const rows = usageRows(usage);
         const modelRows = rows.filter((r) => str(r.task_id) && /model|refine|texture|multiview|convert|stylize/i.test(String(r.type ?? "model")));
         const ids = [...new Set(modelRows.map((r) => str(r.task_id)!))].slice(0, 100);
         let details: Record<string, Record<string, unknown>> = {};

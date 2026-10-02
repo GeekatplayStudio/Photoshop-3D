@@ -43,7 +43,7 @@ npm install
 - **Comments:** explain *why* (especially Photoshop/UXP quirks), not *what*.
 
 ## Icons and fixtures
-- `node scripts/make-icons.mjs` regenerates `plugin/icons/*.png` (committed).
+- `node scripts/make-icons.mjs` regenerates `plugin/icons/*.png` (committed). Icon files are named `<name>@1x.png` / `<name>@2x.png` while the manifest names `icons/<name>.png`; see [ARCHITECTURE.md](ARCHITECTURE.md#platform-findings).
 - `node scripts/make-test-model.mjs` regenerates `tests/fixtures/public/samples/totem.glb` (committed, 7 KB).
 
 ## Documentation screenshots

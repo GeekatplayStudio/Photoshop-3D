@@ -6,7 +6,7 @@ import { listFiles, readZip, validateManifest, zipFolder } from "./ccx.mjs";
 import { sectionFor } from "./release-notes.mjs";
 
 const manifest = JSON.parse(readFileSync(new URL("../plugin/manifest.json", import.meta.url), "utf8"));
-const required = ["index.html", "host.js", "manifest.json", "build-info.json", "web/panel.html", "web/editor.html", "icons/plugin.png", "icons/plugin@2x.png", "icons/panel-dark.png", "icons/panel-dark@2x.png", "icons/panel-light.png", "icons/panel-light@2x.png"];
+const required = ["index.html", "host.js", "manifest.json", "build-info.json", "web/panel.html", "web/editor.html", "icons/plugin@1x.png", "icons/plugin@2x.png", "icons/panel-dark@1x.png", "icons/panel-dark@2x.png", "icons/panel-light@1x.png", "icons/panel-light@2x.png"];
 
 describe("ccx packaging", () => {
     it("zips without directory entries, with forward slashes, skipping sourcemaps", () => {
@@ -24,6 +24,17 @@ describe("ccx packaging", () => {
 
     it("accepts the real manifest with all files present", () => {
         expect(validateManifest({ ...manifest, version: "1.2.3" }, required)).toEqual([]);
+    });
+
+    it("requires @1x/@2x icon files and chrome panel icons, so the dock icon shows on Windows", () => {
+        // The v0.1.1 layout: 1x files without "@1x" and panel icons without a species.
+        const oldFiles = required.map((f) => f.replace("@1x.png", ".png"));
+        const panel = manifest.entrypoints.find((e) => e.type === "panel");
+        const oldManifest = { ...manifest, version: "1.2.3", entrypoints: [{ ...panel, icons: panel.icons.map(({ species: _, ...i }) => i) }] };
+        const problems = validateManifest(oldManifest, oldFiles).join("\n");
+        expect(problems).toMatch(/icon file missing: icons\/panel-dark@1x\.png/);
+        expect(problems).toMatch(/icon file missing: icons\/plugin@1x\.png/);
+        expect(problems).toMatch(/species.*chrome/);
     });
 
     it("rejects what Adobe's installer or the plugin cannot use", () => {

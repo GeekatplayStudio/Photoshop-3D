@@ -8,7 +8,10 @@ import {
     HITEM3D_MODELS,
     HITEM3D_RESOLUTIONS,
     MESHY_AI_MODELS,
+    MESHY_SMART_TOPOLOGY_MODEL,
     TRIPO_MODEL_VERSIONS,
+    TRIPO_TEXTURE_V35,
+    TRIPO_TEXTURE_VERSIONS,
     hitem3dSupportsPbr,
     type DeepPartial,
     type PublicSettings,
@@ -22,13 +25,13 @@ import { Badge, Button, Field, PasteButton, Section, Select, TextInput, Toggle }
 import { usePanel } from "./store";
 
 /** Text/number input that commits on blur or Enter (avoids a settings write per keystroke). */
-function CommitInput({ value, onCommit, type = "text", placeholder, min, max }: { value: string | number; onCommit: (v: string) => void; type?: string; placeholder?: string; min?: number; max?: number }) {
+function CommitInput({ value, onCommit, type = "text", placeholder, min, max, step }: { value: string | number; onCommit: (v: string) => void; type?: string; placeholder?: string; min?: number; max?: number; step?: number }) {
     const [local, setLocal] = useState(String(value));
     useEffect(() => setLocal(String(value)), [value]);
     const commit = () => {
         if (local !== String(value)) onCommit(local);
     };
-    const input = <TextInput type={type} value={local} min={min} max={max} placeholder={placeholder} onChange={(e) => setLocal(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === "Enter" && commit()} />;
+    const input = <TextInput type={type} value={local} min={min} max={max} step={step} placeholder={placeholder} onChange={(e) => setLocal(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === "Enter" && commit()} />;
     if (type !== "text") return input;
     return (
         <div className="flex gap-1">
@@ -158,6 +161,8 @@ export function SettingsTab() {
     const set = (patch: DeepPartial<Settings>) => void run(async () => setSettings(await bridge().call("settings.update", patch)));
     const m = settings.meshy;
     const t = settings.tripo;
+    const tripoIsP = /^P\d/i.test(t.model);
+    const tripoIsV3 = /^v3\./.test(t.model);
     const h = settings.hitem3d;
     const c = settings.comfyui;
 
@@ -165,23 +170,33 @@ export function SettingsTab() {
         <div className="p-2 space-y-2" data-testid="settings">
             <Section title="Meshy" defaultOpen={settings.defaultProvider === "meshy"} right={settings.secrets["meshy.apiKey"].set ? <Badge tone="success">Ready</Badge> : <Badge tone="warning">No key</Badge>}>
                 <SecretField label="API key" secretKey="meshy.apiKey" settings={settings} placeholder="msy_…" hint={<>From <Link href="https://www.meshy.ai/developers/keys">meshy.ai → Developers → API Keys</Link>. Kept in your user profile, never in logs.</>} />
-                <Field label="AI model">
+                <Field label="AI model" hint={m.aiModel === MESHY_SMART_TOPOLOGY_MODEL ? "Smart Topology: a clean low-poly mesh (100 – 15,000 faces)." : "latest = Meshy 7.1. meshy-t2 = Smart Topology (clean low-poly)."}>
                     <ModelSelect value={m.aiModel} known={MESHY_AI_MODELS} onChange={(v) => set({ meshy: { aiModel: v } })} />
                 </Field>
-                <div className="grid grid-cols-2 gap-2">
-                    <Field label="Geometry detail">
-                        <Select value={m.geometryResolution} options={["standard", "2k", "4k"] as const} onChange={(v) => set({ meshy: { geometryResolution: v } })} />
-                    </Field>
-                    <Field label="Texture size">
-                        <Select value={m.textureResolution} options={["2k", "4k", "8k"] as const} onChange={(v) => set({ meshy: { textureResolution: v } })} />
-                    </Field>
-                </div>
+                {m.aiModel !== MESHY_SMART_TOPOLOGY_MODEL && (
+                    <div className="grid grid-cols-2 gap-2">
+                        <Field label="Geometry detail">
+                            <Select value={m.geometryResolution} options={["standard", "2k", "4k"] as const} onChange={(v) => set({ meshy: { geometryResolution: v } })} />
+                        </Field>
+                        <Field label="Texture size">
+                            <Select value={m.textureResolution} options={["2k", "4k", "8k"] as const} onChange={(v) => set({ meshy: { textureResolution: v } })} />
+                        </Field>
+                    </div>
+                )}
                 <Toggle label="Texture the model" checked={m.shouldTexture} onChange={(v) => set({ meshy: { shouldTexture: v } })} />
                 <Toggle label="PBR maps (metallic, roughness, normal)" checked={m.enablePbr} onChange={(v) => set({ meshy: { enablePbr: v } })} />
-                <Toggle label="Remove lighting from the photo (meshy-6)" checked={m.removeLighting} onChange={(v) => set({ meshy: { removeLighting: v } })} />
-                <Toggle label="Enhance the input image" checked={m.imageEnhancement} onChange={(v) => set({ meshy: { imageEnhancement: v } })} />
-                <Toggle label="Remesh" hint="Clean topology at a target polycount." checked={m.shouldRemesh} onChange={(v) => set({ meshy: { shouldRemesh: v } })} />
-                {m.shouldRemesh && (
+                {m.aiModel === "meshy-6" && <Toggle label="Remove lighting from the photo" checked={m.removeLighting} onChange={(v) => set({ meshy: { removeLighting: v } })} />}
+                {m.aiModel !== MESHY_SMART_TOPOLOGY_MODEL && m.aiModel !== "meshy-6-lite" && (
+                    <Toggle label="Enhance the input image" checked={m.imageEnhancement} onChange={(v) => set({ meshy: { imageEnhancement: v } })} />
+                )}
+                {m.aiModel === MESHY_SMART_TOPOLOGY_MODEL ? (
+                    <Field label="Target polycount" hint="100 – 15,000; 0 = Meshy default (4,000)">
+                        <CommitInput type="number" value={m.targetPolycount} min={0} max={15000} onCommit={(v) => set({ meshy: { targetPolycount: Number(v) } })} />
+                    </Field>
+                ) : (
+                    <Toggle label="Remesh" hint="Clean topology at a target polycount." checked={m.shouldRemesh} onChange={(v) => set({ meshy: { shouldRemesh: v } })} />
+                )}
+                {m.shouldRemesh && m.aiModel !== MESHY_SMART_TOPOLOGY_MODEL && (
                     <div className="grid grid-cols-2 gap-2">
                         <Field label="Topology">
                             <Select value={m.topology} options={["triangle", "quad"] as const} onChange={(v) => set({ meshy: { topology: v } })} />
@@ -199,23 +214,41 @@ export function SettingsTab() {
 
             <Section title="Tripo" defaultOpen={settings.defaultProvider === "tripo"} right={settings.secrets["tripo.apiKey"].set ? <Badge tone="success">Ready</Badge> : <Badge tone="warning">No key</Badge>}>
                 <SecretField label="API key" secretKey="tripo.apiKey" settings={settings} placeholder="tsk_…" hint={<>From <Link href="https://platform.tripo3d.ai/api-keys">platform.tripo3d.ai → API keys</Link>. Uses Tripo API v3.</>} />
-                <Field label="Model version">
+                <Field label="Model version" hint={tripoIsP ? "P series: low-poly models (P1: up to 20,000 faces, P2 preview: up to 50,000)." : "v3.1 is Tripo's latest. P1/P2 make low-poly models."}>
                     <ModelSelect value={t.model} known={TRIPO_MODEL_VERSIONS} onChange={(v) => set({ tripo: { model: v } })} />
                 </Field>
+                {!tripoIsP && (
+                    <Field label="Texture model" hint="v3.5 is Tripo's newest texture model; it adds Fast quality.">
+                        <Select
+                            value={t.textureVersion}
+                            options={[{ value: "", label: "Tripo default" }, ...TRIPO_TEXTURE_VERSIONS.map((v) => ({ value: v, label: v === TRIPO_TEXTURE_V35 ? `${v} (newest)` : v }))]}
+                            onChange={(v) => set({ tripo: { textureVersion: v } })}
+                        />
+                    </Field>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                     <Field label="Texture quality">
-                        <Select value={t.textureQuality} options={["standard", "detailed", "extreme"] as const} onChange={(v) => set({ tripo: { textureQuality: v } })} />
+                        <Select
+                            value={t.textureQuality}
+                            options={t.textureVersion === TRIPO_TEXTURE_V35 ? (["fast", "standard", "detailed", "extreme"] as const) : (["standard", "detailed", "extreme"] as const)}
+                            onChange={(v) => set({ tripo: { textureQuality: v } })}
+                        />
                     </Field>
-                    <Field label="Geometry quality">
-                        <Select value={t.geometryQuality} options={["standard", "detailed"] as const} onChange={(v) => set({ tripo: { geometryQuality: v } })} />
-                    </Field>
+                    {tripoIsV3 && (
+                        <Field label="Geometry quality">
+                            <Select value={t.geometryQuality} options={["standard", "detailed"] as const} onChange={(v) => set({ tripo: { geometryQuality: v } })} />
+                        </Field>
+                    )}
                 </div>
                 <Toggle label="Texture" checked={t.texture} onChange={(v) => set({ tripo: { texture: v } })} />
                 <Toggle label="PBR materials" checked={t.pbr} onChange={(v) => set({ tripo: { pbr: v } })} />
-                <Toggle label="Smart low-poly" checked={t.smartLowPoly} onChange={(v) => set({ tripo: { smartLowPoly: v } })} />
-                <Toggle label="Real-world size (auto size)" checked={t.autoSize} onChange={(v) => set({ tripo: { autoSize: v } })} />
+                {t.textureVersion === TRIPO_TEXTURE_V35 && !tripoIsP && (
+                    <Toggle label="Remove lighting from the photo (delight)" checked={t.delight} onChange={(v) => set({ tripo: { delight: v } })} />
+                )}
+                {tripoIsV3 && <Toggle label="Smart low-poly" checked={t.smartLowPoly} onChange={(v) => set({ tripo: { smartLowPoly: v } })} />}
+                {tripoIsV3 && <Toggle label="Real-world size (auto size)" checked={t.autoSize} onChange={(v) => set({ tripo: { autoSize: v } })} />}
                 <div className="grid grid-cols-2 gap-2">
-                    <Field label="Face limit" hint="0 = Tripo default">
+                    <Field label="Face limit" hint="0 = Tripo default; kept within the model's range">
                         <CommitInput type="number" value={t.faceLimit} min={0} onCommit={(v) => set({ tripo: { faceLimit: Number(v) } })} />
                     </Field>
                     <Field label="Orientation">
@@ -229,7 +262,7 @@ export function SettingsTab() {
             </Section>
 
             <Section title="Hitem3D (hi3d.ai)" defaultOpen={settings.defaultProvider === "hitem3d"} right={settings.secrets["hitem3d.accessKey"].set ? <Badge tone="success">Ready</Badge> : <Badge tone="warning">No key</Badge>}>
-                <SecretField label="Access Key (or AK:SK, or a token)" secretKey="hitem3d.accessKey" settings={settings} hint={<>Create an API key pair in your <Link href="https://www.hitem3d.ai">hitem3d.ai</Link> account (<Link href="https://docs.hi3d.ai/en/api/getting-started/introduction">how</Link>). The plugin signs in and refreshes the token itself.</>} />
+                <SecretField label="Access Key (or AK:SK, or a token)" secretKey="hitem3d.accessKey" settings={settings} hint={<>Create an API key pair at <Link href="https://platform.hi3d.ai/console/apiKey">platform.hi3d.ai → API Keys</Link> (<Link href="https://docs.hi3d.ai/en/api/getting-started/quickstart">how</Link>). The plugin signs in and refreshes the token itself.</>} />
                 <SecretField label="Secret Key" secretKey="hitem3d.secretKey" settings={settings} />
                 <Field label="App ID (optional)">
                     <CommitInput value={h.appId} onCommit={(v) => set({ hitem3d: { appId: v } })} />
@@ -249,6 +282,11 @@ export function SettingsTab() {
                     <CommitInput type="number" value={h.face} min={0} max={5000000} onCommit={(v) => set({ hitem3d: { face: Number(v) } })} />
                 </Field>
                 {hitem3dSupportsPbr(h.model) && <Toggle label="PBR materials" checked={h.pbr} onChange={(v) => set({ hitem3d: { pbr: v } })} />}
+                {hitem3dSupportsPbr(h.model) && h.requestType === "3" && (
+                    <Field label="Remove lighting from the photo" hint="De-shading strength 0 – 1 (Hitem3D default 0.5)">
+                        <CommitInput type="number" value={h.shading} min={0} max={1} step={0.1} onCommit={(v) => set({ hitem3d: { shading: Number(v) } })} />
+                    </Field>
+                )}
                 <Toggle label="Remove background on Hitem3D" checked={h.removeBackground} onChange={(v) => set({ hitem3d: { removeBackground: v } })} />
                 <Field label="API address">
                     <CommitInput value={h.baseUrl} onCommit={(v) => set({ hitem3d: { baseUrl: v } })} />

@@ -104,11 +104,14 @@ function icon(name, size, theme) {
     writeFileSync(join(out, name), png(size, render(size, faces, { x: 0.82, y: 0.17, r: 0.13, color: t.sun })));
 }
 
-icon("panel-dark.png", 23, "dark");
+// The manifest names "icons/panel-dark.png"; Photoshop loads "panel-dark@1x.png" and
+// "panel-dark@2x.png". On Windows a 1x file without "@1x" is not found, and the panel
+// shows a blank icon when it is collapsed in a dock.
+icon("panel-dark@1x.png", 23, "dark");
 icon("panel-dark@2x.png", 46, "dark");
-icon("panel-light.png", 23, "light");
+icon("panel-light@1x.png", 23, "light");
 icon("panel-light@2x.png", 46, "light");
-icon("plugin.png", 48, "plugin");
+icon("plugin@1x.png", 48, "plugin");
 icon("plugin@2x.png", 96, "plugin");
 icon("app-256.png", 256, "plugin");
 console.log(`Icons written to ${out}`);

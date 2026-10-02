@@ -312,8 +312,9 @@ describe("ComfyUI", () => {
         expect(done.result?.modelUrl).toBe(`${base}/view?filename=trellis2_00001_.glb&subfolder=photoshop3d&type=output`);
     });
 
-    it("lists past 3D outputs from history", async () => {
+    it("lists past 3D outputs from history on servers without the jobs API", async () => {
         const fetch = scriptedFetch([
+            route("GET", /\/api\/jobs\?/, () => json({ error: "Not Found" }, 404)),
             route("GET", `${base}/history?max_items=500`, () =>
                 json({
                     a: { status: { status_str: "success", messages: [["execution_start", { timestamp: 10 }]] }, outputs: { "9": { images: [{ filename: "x.png" }] } } },

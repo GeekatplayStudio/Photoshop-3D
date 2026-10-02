@@ -3,8 +3,12 @@
  *
  * - Create: POST /openapi/v1/image-to-3d with the layer as a PNG data URI (Meshy
  *   accepts data URIs, so there is no upload step). Response: { result: taskId }.
+ *   alpha_thumbnail=true asks for a transparent preview (alpha_thumbnail_url). The
+ *   Smart Topology model (meshy-t2) is sent with model_type "smart-topology".
  * - Poll:   GET  /openapi/v1/image-to-3d/{id} → status PENDING|IN_PROGRESS|SUCCEEDED|FAILED|CANCELED,
- *           progress 0-100, model_urls.glb, thumbnail_url, task_error.message.
+ *           progress 0-100, model_urls.glb, alpha_thumbnail_url / thumbnail_url, task_error.message.
+ * - Rate limits answer 429 with Retry-After (honoured by the job queue); retired endpoints
+ *   carry a Deprecation header, which is logged (see platform/http.ts).
  * - Browse: GET  /openapi/v1/image-to-3d, /openapi/v1/multi-image-to-3d and
  *           /openapi/v2/text-to-3d with page_num/page_size/sort_by=-created_at
  *           (each returns a bare array of tasks). Only tasks created through the API
@@ -13,6 +17,7 @@
  * - Test:   GET  /openapi/v1/balance → { balance }.
  */
 import { bytesToBase64 } from "@shared/bytes";
+import { MESHY_SMART_TOPOLOGY_MODEL } from "@shared/settings";
 import type { RemoteItem, RemoteStatus } from "@shared/types";
 import { HttpError, requestJson } from "../platform/http";
 import { formatFromUrl, obj, str, toEpochMs, toPercent, type ModelResult, type PollResult, type ProviderAdapter, type ProviderContext } from "./types";
@@ -45,9 +50,23 @@ const kindOf = (meta?: Record<string, unknown>): MeshyKind => {
     return k === "multi-image-to-3d" || k === "text-to-3d" ? k : "image-to-3d";
 };
 
-/** Request body for image-to-3d from the user's settings (only documented fields). */
+/** Request body for image-to-3d from the user's settings (only documented fields, per model). */
 export function buildImageTo3dBody(settings: ProviderContext["settings"]["meshy"], dataUri: string): Record<string, unknown> {
     const model = settings.aiModel;
+    if (model === MESHY_SMART_TOPOLOGY_MODEL) {
+        // Smart Topology: clean low-poly topology; target_polycount 100–15,000 (Meshy default 4,000).
+        const body: Record<string, unknown> = {
+            image_url: dataUri,
+            model_type: "smart-topology",
+            ai_model: model,
+            should_texture: settings.shouldTexture,
+            enable_pbr: settings.shouldTexture && settings.enablePbr,
+            target_formats: ["glb"],
+            alpha_thumbnail: true,
+        };
+        if (settings.targetPolycount > 0) body.target_polycount = Math.min(15_000, Math.max(100, settings.targetPolycount));
+        return body;
+    }
     const body: Record<string, unknown> = {
         image_url: dataUri,
         ai_model: model,
@@ -55,6 +74,7 @@ export function buildImageTo3dBody(settings: ProviderContext["settings"]["meshy"
         enable_pbr: settings.shouldTexture && settings.enablePbr,
         should_remesh: settings.shouldRemesh,
         target_formats: ["glb"],
+        alpha_thumbnail: true,
     };
     if (settings.shouldRemesh) {
         body.topology = settings.topology;
@@ -94,12 +114,15 @@ function resultFrom(task: Record<string, unknown>, kind: MeshyKind): ModelResult
     return {
         modelUrl: glb,
         format: formatFromUrl(glb),
-        thumbnailUrl: str(task.thumbnail_url),
+        thumbnailUrl: thumbnailOf(task),
         name: taskName(task, kind),
         createdAt: toEpochMs(task.created_at),
         meta: { kind, aiModel: task.ai_model, expiresAt: toEpochMs(task.expires_at), credits: task.consumed_credits },
     };
 }
+
+/** The transparent preview when Meshy made one (alpha_thumbnail), else the regular one. */
+const thumbnailOf = (task: Record<string, unknown>) => str(task.alpha_thumbnail_url) ?? str(task.thumbnail_url);
 
 function taskName(task: Record<string, unknown>, kind: MeshyKind): string {
     const prompt = str(task.prompt) ?? str(task.texture_prompt);
@@ -202,7 +225,7 @@ export const meshy: ProviderAdapter = {
                     status,
                     progress: toPercent(task.progress),
                     createdAt: toEpochMs(task.created_at),
-                    thumbnailUrl: str(task.thumbnail_url),
+                    thumbnailUrl: thumbnailOf(task),
                     hasModel: status === "succeeded" && !!glb,
                     kind: str(task.type) ?? kind,
                 });

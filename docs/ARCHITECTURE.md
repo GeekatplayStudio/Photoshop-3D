@@ -123,6 +123,7 @@ All verified in Photoshop 27.10 / UXP 9.4.1 / UPIA 8.5 on Windows 11 while build
 | WebView `postMessage` throughput is about 50 MB/s each way (64 MB host→page in 1.3 s). | Base64 renders and fallback model streaming are fine. |
 | Messages from WebViews reach the host's `window` `message` event with `event.origin` = the page URL. | `app.ts` routes by origin (`editor.html` vs `panel.html`). |
 | Opening a `.ccx` runs `UnifiedPluginInstallerAgent.exe /doubleClick <file>`, which hands it to the Creative Cloud app for confirmation. | The updater uses `shell.openPath`. |
+| **Panel icons:** the manifest names `icons/x.png`, and Photoshop loads `x@1x.png` / `x@2x.png` for the scales listed. On Windows, a 1× file named without `@1x` is not found, so a panel collapsed in a dock shows an **empty icon** (it may still look fine on macOS). Panel icons also need `"species": ["chrome"]`. That is the convention in Adobe's own samples. Photoshop reads dock icons at startup, so a fix shows after a restart. | `plugin/icons/*@1x.png` and `*@2x.png`, made by `scripts/make-icons.mjs`. `validateManifest` (scripts/ccx.mjs) refuses to package without the `@Nx` files or the chrome species. |
 
 ## Adding a 3D service
 

@@ -18,8 +18,8 @@
             "preferredDockedSize": { "width": 320, "height": 680 },
             "preferredFloatingSize": { "width": 380, "height": 760 },
             "icons": [
-                { "width": 23, "height": 23, "path": "icons/panel-dark.png", "scale": [1, 2], "theme": ["darkest", "dark", "medium"] },
-                { "width": 23, "height": 23, "path": "icons/panel-light.png", "scale": [1, 2], "theme": ["lightest", "light"] }
+                { "width": 23, "height": 23, "path": "icons/panel-dark.png", "scale": [1, 2], "theme": ["darkest", "dark", "medium"], "species": ["chrome"] },
+                { "width": 23, "height": 23, "path": "icons/panel-light.png", "scale": [1, 2], "theme": ["lightest", "light"], "species": ["chrome"] }
             ]
         },
         {

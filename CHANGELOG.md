@@ -4,7 +4,41 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
-### Changed
+### Fixed
+- **The panel icon is no longer empty when the panel is collapsed in a dock (Windows).**
+  - Photoshop looks for `<name>@1x.png` and `@2x.png` and needs `"species": ["chrome"]` on panel icons.
+  - The icon files are renamed to that convention, and packaging now refuses a manifest without them.
+  - Restart Photoshop once after updating.
+
+### Changed: latest service APIs (checked against each changelog on 2026-10-02)
+- **Meshy:**
+  - Asks for transparent previews (`alpha_thumbnail`) and uses them in the library.
+  - New **Smart Topology** model `meshy-t2` (clean low-poly, 100–15,000 faces).
+  - Saved settings naming retired models (`meshy-5`, `meshy-7`, `meshy-4`, `meshy-t1`) move to their successors.
+  - Only fields each model supports are sent.
+- **Tripo:**
+  - New **P2** model (`P2-20260801`, preview).
+  - New **texture model v3.5** (`texture_version`), with **Fast** quality and **delight** (remove baked lighting).
+  - `auto_size` is no longer sent to v2.5 or the P series.
+  - `face_limit` is kept within each model's documented range.
+  - Unknown task statuses fail the job, as Tripo's v3 migration guide asks.
+  - Images over Tripo's 20 MB limit are refused with a clear message.
+  - Usage-history errors are reported.
+- **Hitem3D:**
+  - New **de-shading** option (`shading`).
+  - Plain-language messages for the documented error codes (10031001–10031017, 10000000).
+  - The 20 MB image limit is checked before upload.
+  - Links point to the new hi3d.ai docs and key page (platform.hi3d.ai).
+- **ComfyUI (0.38):**
+  - Cancel uses the jobs API (`POST /api/jobs/{id}/cancel`); `/interrupt` and `/queue` delete are deprecated.
+  - Browse uses `GET /api/jobs` (paginated, without the full workflow graphs).
+  - Both fall back to the old routes on older servers.
+  - Test connection also checks the BiRefNet background-removal model.
+  - The built-in TRELLIS.2 workflow uses whichever model files are installed (also in subfolders, or the documented alternatives).
+- **All services:**
+  - Rate limits (429) wait as long as the service asks (`Retry-After`). Polling doesn't count them as errors, and submissions are retried.
+  - Endpoints a service marks deprecated (`Deprecation` header) are logged.
+  - Error messages keep the service's code and request id.
 - The installers' final check names each Photoshop version that has the plugin (for example "Photoshop 2026 (27.10.0): version 0.1.1") instead of printing Adobe's raw list.
 - Docs: a sharp screenshot of the Plugins menu.
 
