@@ -4,6 +4,8 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-02
+
 ### Added
 - **Import your own 3D files** in any common format: GLB, glTF, FBX, OBJ (+MTL), DAE, USDZ/USD, 3DS, STL, PLY, 3MF, AMF, VRML and VOX.
   - **Import files…** picks one or more files. **Import folder…** adds every 3D file in a folder and its subfolders.
