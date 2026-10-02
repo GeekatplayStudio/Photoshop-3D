@@ -76,6 +76,9 @@ test.describe("panel", () => {
 
 test.describe("3D editor", () => {
     test.use({ viewport: { width: 1200, height: 800 } });
+    // CI runners have no GPU: software WebGL (SwiftShader) can take seconds per frame there,
+    // which made this test overrun the default 60 s now and then.
+    test.describe.configure({ timeout: 180_000 });
 
     test("renders the model and returns a transparent PNG with settings", async ({ page }) => {
         const errors: string[] = [];
@@ -91,7 +94,7 @@ test.describe("3D editor", () => {
         await page.getByRole("option", { name: "Sunset" }).click();
 
         await page.getByTestId("editor-ok").click();
-        await page.waitForFunction(() => window.__ps3dEditorResult !== undefined, null, { timeout: 30_000 });
+        await page.waitForFunction(() => window.__ps3dEditorResult !== undefined, null, { timeout: 90_000 });
         const result = await page.evaluate(() => {
             const r = window.__ps3dEditorResult!;
             return { w: r.width, h: r.height, png: r.pngBase64.slice(0, 12), bytes: r.pngBase64.length, bounds: r.contentBounds, s: r.settings };
