@@ -34,7 +34,7 @@ Every model is saved in a library on your computer, so you can use it again in a
 | Create | Your library | Browse your services | Settings |
 |:---:|:---:|:---:|:---:|
 | <img src="docs/images/ui-create.png" width="200" alt="Create tab"> | <img src="docs/images/ui-library.png" width="200" alt="Library tab"> | <img src="docs/images/ui-browse.png" width="200" alt="Browse tab"> | <img src="docs/images/ui-settings.png" width="200" alt="Settings tab"> |
-| Send a layer or selection to a 3D service and follow its progress. | Every model you made or imported, with previews. Double-click to place. | Load models you made earlier on Meshy, Tripo, Hitem3D or ComfyUI. | Add your keys, test the connection and see your credit balance. |
+| Send a layer or selection to a 3D service and follow its progress. | Every model you made or imported (GLB, FBX, OBJ…), with previews. Double-click to place. | Load models you made earlier on Meshy, Tripo, Hitem3D or ComfyUI. | Add your keys, test the connection and see your credit balance. |
 
 ---
 
@@ -92,6 +92,7 @@ Keys are stored only on your computer. They are sent only to the service they be
 - **Send to 3D:** the active layer, or just the part inside your selection. Transparency is kept, so cut-out objects give the cleanest models. Jobs keep running if you close the panel, and they continue after a Photoshop restart.
 - **Browse your collections:** see the models you already made on Meshy, Tripo, Hitem3D or ComfyUI and import them with one click.
 - **Local library:** every model is downloaded once and stored on your computer, so it opens instantly and keeps working after the service's links expire. Previews are made automatically.
+- **Your own 3D files:** import GLB, glTF, FBX, OBJ, DAE, USDZ, 3DS, STL, PLY, 3MF and more, one file or a whole folder at a time. Textures come along and are packed into the library. Or copy files into the library's *Import* folder, and they are added by themselves.
 - **3D pose & light editor:**
   - Light presets (Studio, Golden Hour, Noon, Dramatic, Rim, Soft, Moonlight), a sun you can drag, and color temperature.
   - Environments, cast and contact shadows, camera views and field of view.

@@ -112,3 +112,37 @@ test.describe("3D editor", () => {
     });
 });
 
+
+test.describe("import", () => {
+    test.use({ viewport: { width: 340, height: 900 } });
+    test.describe.configure({ timeout: 180_000 });
+
+    test("converts FBX, OBJ, glTF, STL, PLY and USDZ to GLB with their textures and adds them to the library", async ({ page }) => {
+        const errors: string[] = [];
+        page.on("pageerror", (e) => errors.push(e.message));
+        await page.goto("/panel.html");
+        await page.getByTestId("tab-library").click();
+        await expect(page.getByTestId("library-card")).toHaveCount(2);
+        await page.getByTestId("import-files").click();
+        await page.waitForFunction(() => (window.__ps3dImported?.length ?? 0) >= 6, null, { timeout: 120_000 });
+        await expect(page.getByTestId("import-status")).toHaveCount(0, { timeout: 30_000 });
+        const imported = await page.evaluate(() => window.__ps3dImported!);
+        expect(imported.map((i) => i.sourceFormat).sort()).toEqual(["fbx", "gltf", "obj", "ply", "stl", "usdz"]);
+        for (const i of imported) {
+            expect(i.bytes, i.name).toBeGreaterThan(300);
+            expect(i.meshes, i.name).toBeGreaterThan(0);
+        }
+        // The checker texture is found next to the model (FBX keeps an absolute path from another machine).
+        for (const name of ["cube-fbx", "cube-obj", "cube-gltf", "cube-usdz"]) {
+            const i = imported.find((x) => x.name === name)!;
+            expect(i.images, name).toBe(1);
+            expect(i.notes.join(" "), name).not.toMatch(/Missing/);
+        }
+        await expect(page.getByTestId("library-card")).toHaveCount(8);
+        await expect(page.getByText(/Added 6 models to the library/)).toBeVisible();
+        await expect(page.getByText(/notes\.txt \(not a supported 3D file\)/)).toBeVisible();
+        // Previews are rendered for the converted models.
+        await expect(page.getByTestId("library-card").filter({ hasText: "cube-fbx" }).locator("img")).toHaveAttribute("src", /^data:image\/png/, { timeout: 60_000 });
+        expect(errors).toEqual([]);
+    });
+});

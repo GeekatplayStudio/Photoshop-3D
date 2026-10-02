@@ -50,6 +50,7 @@ interface UxpEntry {
     isFile: boolean;
     isFolder: boolean;
     delete(): Promise<void>;
+    getMetadata(): Promise<{ size: number; dateCreated: Date; dateModified: Date }>;
 }
 interface UxpFile extends UxpEntry {
     read(options?: { format?: unknown }): Promise<string | ArrayBuffer>;
@@ -66,6 +67,7 @@ interface UxpLocalFileSystem {
     getPluginFolder(): Promise<UxpFolder>;
     getTemporaryFolder(): Promise<UxpFolder>;
     getFileForOpening(options?: { types?: string[]; allowMultiple?: boolean; initialDomain?: unknown }): Promise<UxpFile | UxpFile[] | null>;
+    getFolder(options?: { initialDomain?: unknown }): Promise<UxpFolder | null>;
     getEntryWithUrl(url: string): Promise<UxpEntry>;
     createSessionToken(entry: UxpEntry): string;
 }

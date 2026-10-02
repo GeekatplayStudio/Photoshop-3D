@@ -80,9 +80,12 @@ await page.getByTestId("tab-browse").click();
 await page.getByTestId("remote-card").first().waitFor();
 await shot("browse");
 
-// Library with rendered previews.
+// Library with rendered previews, after importing the sample files (FBX, OBJ, glTF, STL, PLY, USDZ).
 await page.getByTestId("tab-library").click();
-await page.getByTestId("library-card").first().locator("img").waitFor({ timeout: 30_000 });
+await page.getByTestId("import-files").click();
+await page.waitForFunction(() => (window.__ps3dImported?.length ?? 0) >= 6, null, { timeout: 120_000 });
+await page.getByTestId("import-status").waitFor({ state: "detached", timeout: 60_000 });
+await page.waitForFunction(() => [...document.querySelectorAll('[data-testid="library-card"]')].slice(0, 6).every((c) => c.querySelector("img")), null, { timeout: 60_000 });
 await page.waitForTimeout(1500);
 await shot("library");
 

@@ -53,6 +53,13 @@ export default defineConfig(({ command }) => ({
     base: "./",
     publicDir: command === "serve" ? resolve(root, "tests/fixtures/public") : false,
     plugins: [react(), tailwindcss(), decoders()],
+    // The import converter loads these on first use; listing them stops the dev server from
+    // discovering them at run time and reloading the page in the middle of an import.
+    optimizeDeps: {
+        include: ["FBXLoader", "OBJLoader", "MTLLoader", "STLLoader", "PLYLoader", "ColladaLoader", "3MFLoader", "AMFLoader", "TDSLoader", "VRMLLoader", "USDLoader", "VOXLoader", "TGALoader"]
+            .map((l) => `three/examples/jsm/loaders/${l}.js`)
+            .concat("three/examples/jsm/exporters/GLTFExporter.js"),
+    },
     resolve: {
         alias: {
             "@shared": resolve(root, "src/shared"),

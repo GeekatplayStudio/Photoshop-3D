@@ -25,6 +25,8 @@ import { BrowseService } from "./services/browse";
 import { TaskHistory } from "./services/history";
 import { JobManager } from "./services/jobs";
 import { LIBRARY_DIR, Library } from "./services/library";
+import { IMPORT_DIR, ModelImporter, type ImportFs } from "./services/modelImport";
+import { MODEL_EXTENSIONS } from "@shared/modelFormats";
 import { SettingsService } from "./services/settingsService";
 import { Updater } from "./services/updater";
 import { copyTree, ensureWebAssets } from "./services/webAssets";
@@ -119,6 +121,33 @@ export async function startApp() {
     const context = (): ProviderContext => ({ fetch: (u, i) => fetch(u, i), settings: settings.value, secret: (k) => settings.secret(k), log, store: dataStore });
     const jobs = new JobManager({ store: dataStore, log, library, history, fetch: (u, i) => fetch(u, i), provider: getProvider, context });
     await jobs.load();
+    // Files outside the data folder (imports) are read by native path; the manifest grants fullAccess.
+    const importFs: ImportFs = {
+        sep: platform() === "win32" ? "\\" : "/",
+        async list(folder, withMeta) {
+            const dir = await lfs.getEntryWithUrl(toUxpFileUrl(folder));
+            if (!dir.isFolder) throw new Error(`${folder} is not a folder`);
+            const entries = await (dir as UxpFolder).getEntries();
+            return Promise.all(
+                entries.map(async (e) => {
+                    if (!withMeta || !e.isFile) return { name: e.name, isFolder: e.isFolder };
+                    try {
+                        const m = await e.getMetadata();
+                        return { name: e.name, isFolder: false, size: m.size, modified: new Date(m.dateModified).getTime() };
+                    } catch {
+                        return { name: e.name, isFolder: false };
+                    }
+                }),
+            );
+        },
+        async readBytes(path) {
+            const file = await lfs.getEntryWithUrl(toUxpFileUrl(path));
+            if (!file.isFile) throw new Error(`${path} is not a file`);
+            return new Uint8Array((await (file as UxpFile).read({ format: storage.formats.binary })) as ArrayBuffer);
+        },
+        fileUrl: toBrowserFileUrl,
+    };
+    const importer = new ModelImporter({ fs: importFs, library, store: dataStore, log, inboxPath: dataStore.nativePath(IMPORT_DIR) });
     const browse = new BrowseService({ library, history, log, fetch: (u, i) => fetch(u, i), provider: getProvider, context });
     const updater = new Updater({
         fetch: (u, i) => fetch(u, i),
@@ -180,6 +209,7 @@ export async function startApp() {
         platform: platform(),
         dataFolder: dataStore.rootPath,
         libraryFolder: dataStore.nativePath(LIBRARY_DIR),
+        importFolder: dataStore.nativePath(IMPORT_DIR),
         logFile: dataStore.nativePath(LOG_FILE),
         libraryBaseUrl,
         repoUrl: REPO_URL,
@@ -325,12 +355,22 @@ export async function startApp() {
         "library.list": () => library.list(),
         "library.update": ({ id, name, favorite }) => library.update(id, { name, favorite }),
         "library.remove": ({ id }) => library.remove(id),
-        "library.importFile": async () => {
-            const file = await lfs.getFileForOpening({ types: ["glb", "gltf"] });
-            const entry = Array.isArray(file) ? file[0] : file;
-            if (!entry) return null;
-            const bytes = new Uint8Array((await entry.read({ format: storage.formats.binary })) as ArrayBuffer);
-            return library.add({ name: entry.name.replace(/\.(glb|gltf)$/i, ""), origin: "local", model: bytes, meta: { importedFrom: entry.nativePath } });
+        "library.pickImport": async ({ folder }) => {
+            if (folder) {
+                const dir = await lfs.getFolder();
+                return dir ? importer.importFolder(dir.nativePath) : null;
+            }
+            const picked = await lfs.getFileForOpening({ allowMultiple: true, types: [...MODEL_EXTENSIONS] });
+            const files = Array.isArray(picked) ? picked : picked ? [picked] : [];
+            return files.length ? importer.importFiles(files.map((f) => f.nativePath)) : null;
+        },
+        "library.scanInbox": () => importer.scanInbox(),
+        "library.readImportFile": async ({ id, path }) => ({ base64: bytesToBase64(await importer.readFile(id, path)) }),
+        "library.addConverted": ({ id, name, glbBase64, sourceFormat, notes }) => importer.addConverted(id, name, base64ToBytes(glbBase64), sourceFormat, notes),
+        "library.importFailed": ({ id, error }) => importer.importFailed(id, error),
+        "library.revealInbox": async () => {
+            await importer.scanInbox(); // creates the folder and its README
+            await shell.openPath(dataStore.nativePath(IMPORT_DIR), "Show the folder whose 3D files are added to the library");
         },
         "library.saveThumbnail": ({ id, pngBase64 }) => library.setThumbnail(id, base64ToBytes(pngBase64)),
         "library.readFile": async ({ file }) => ({ base64: bytesToBase64(await library.readFile(file)) }),

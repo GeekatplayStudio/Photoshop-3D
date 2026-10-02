@@ -4,6 +4,16 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+### Added
+- **Import your own 3D files** in any common format: GLB, glTF, FBX, OBJ (+MTL), DAE, USDZ/USD, 3DS, STL, PLY, 3MF, AMF, VRML and VOX.
+  - **Import files…** picks one or more files. **Import folder…** adds every 3D file in a folder and its subfolders.
+  - Everything is added to the library automatically. Formats other than GLB are converted to GLB in the panel (three.js loaders + GLTFExporter), with their materials and textures packed in.
+  - Textures are found next to the model or in subfolders, by name, even when the file points at a folder on another computer.
+- **Import folder:** files copied into the library's `Import` folder in File Explorer / Finder are added automatically while the Library tab is open. Each file is imported once, and nothing there is moved or deleted.
+
+### Fixed
+- **Show folder** (Library, Settings › Diagnostics) failed with `Extension "" is not accepted`. The manifest now allows opening folders, and Photoshop asks once for permission.
+
 ## [0.1.2] - 2026-10-02
 
 ### Fixed

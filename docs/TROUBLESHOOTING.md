@@ -25,6 +25,8 @@ The [install guide](INSTALL.md) has the simple version of this table.
 | The panel's icon is empty when it is collapsed in a dock | Fixed in 0.1.2. Update, then restart Photoshop once (Photoshop reads dock icons at startup). |
 | Blank panel or "could not start" | Check the log. Panel pages are copied to the UXP data folder on first start; deleting `%APPDATA%\Adobe\UXP\PluginsStorage\PHSP\<version>\External\com.geekatplay.photoshop3d\PluginData\web` forces a fresh copy. |
 | Ctrl/Cmd+V doesn't paste | Photoshop keeps that shortcut. Use the 📋 button next to the field. |
+| **Show folder** says `Extension "" is not accepted` | Fixed in 0.1.3: update the plugin. Photoshop then asks whether the plugin may open the folder. Click **Allow** (tick *Remember my choice* to stop being asked). |
+| Show folder does nothing | You clicked **Block** with *Remember my choice*. Reinstall the plugin to reset the choice, or open the folder by hand (its path is in Settings › Diagnostics). |
 | "Layer … is empty" | The active layer has no pixels; select another layer or make a selection. |
 | "32-bit documents are not supported" | Image › Mode › 16 or 8 Bits/Channel. |
 
@@ -54,6 +56,15 @@ The [install guide](INSTALL.md) has the simple version of this table.
 | "This is a regular saved workflow" | In ComfyUI use **Workflow › Export (API)** and choose that file. |
 | Job fails with "ComfyUI no longer knows this job" | ComfyUI was restarted while the job was queued; click **Retry**. |
 | The model includes background or shadow | Settings › ComfyUI › Object mask: use *layer transparency* and cut the object out first. |
+
+## Importing your own files
+| Symptom | Fix |
+|---|---|
+| "Missing texture: wood.jpg" after an import | Put the texture next to the model (or in a subfolder) and import again. The model was still added, without that texture. |
+| "No geometry found in this file" | The file holds no meshes (for example only animation or a camera), or uses a feature the three.js loader does not support. Re-export it from your 3D app as GLB, FBX or OBJ. |
+| A file in the Import folder is not picked up | The Library tab must be open. Each file is imported once; to import it again, change or rename it. Check the log (Settings › Diagnostics). |
+| The model looks dark or too shiny | Lighting and materials change when converting from Phong/Lambert. Adjust the light in the 3D editor, or export from your 3D app as GLB, which keeps physically based materials exactly. |
+| The model is huge, tiny or lying down | The 3D editor fits any size into view; use **Tilt** / **Turn** in the editor to stand it up. |
 
 ## The 3D editor
 | Symptom | Fix |

@@ -28,6 +28,7 @@ import type {
     UpdateInfo,
 } from "./types";
 import type { DeepPartial, PublicSettings, SecretKey, Settings } from "./settings";
+import type { ImportBatch } from "./modelFormats";
 import type { LightingDefaults, ThreeDSettings } from "./threeD";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
@@ -89,10 +90,20 @@ export type HostApi = {
     "library.list": [void, LibraryItem[]];
     "library.update": [{ id: string; name?: string; favorite?: boolean }, LibraryItem];
     "library.remove": [{ id: string }, void];
-    "library.importFile": [void, LibraryItem | null];
+    /** Lets the user pick model files (or a folder of them); GLB is stored now, the rest comes back for conversion. null = cancelled. */
+    "library.pickImport": [{ folder?: boolean }, ImportBatch | null];
+    /** Imports new files from the library's Import folder (files copied there in the file manager). */
+    "library.scanInbox": [void, ImportBatch];
+    /** Reads a file that belongs to an import (fallback when the WebView cannot read it itself). */
+    "library.readImportFile": [{ id: string; path: string }, { base64: string }];
+    /** Stores a model the panel converted to GLB. */
+    "library.addConverted": [{ id: string; name: string; glbBase64: string; sourceFormat: string; notes?: string[] }, LibraryItem];
+    /** Records that converting an import failed (logged; an Import-folder file is not retried). */
+    "library.importFailed": [{ id: string; error: string }, void];
     "library.saveThumbnail": [{ id: string; pngBase64: string }, LibraryItem];
     "library.readFile": [{ file: string }, { base64: string }];
     "library.revealFolder": [void, void];
+    "library.revealInbox": [void, void];
 
     /** Opens the modal 3D editor for a library model and places the result in the active document. */
     "editor.placeModel": [{ libraryId: string; atSource?: string }, PlaceResult | null];

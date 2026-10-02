@@ -11,8 +11,9 @@ import type { Logger } from "../platform/logger";
 export type Handlers = { [M in HostMethod]?: (params: HostApi[M][0], meta: { source: string }) => Promise<HostApi[M][1]> | HostApi[M][1] };
 
 /** Methods whose params are too big or too sensitive to log. */
-const QUIET_PARAMS = new Set<HostMethod>(["settings.setSecret", "library.saveThumbnail", "editor.complete", "log.write"]);
-const QUIET_CALLS = new Set<HostMethod>(["log.write", "ps.context", "jobs.list", "log.tail"]);
+const QUIET_PARAMS = new Set<HostMethod>(["settings.setSecret", "library.saveThumbnail", "library.addConverted", "editor.complete", "log.write"]);
+// library.scanInbox runs every few seconds while the Library tab is open; the importer logs what it finds.
+const QUIET_CALLS = new Set<HostMethod>(["log.write", "ps.context", "jobs.list", "log.tail", "library.scanInbox"]);
 /** Methods whose failures are normal states shown in the UI ("Layer is empty"), logged at debug level. */
 const EXPECTED_FAILURES = new Set<HostMethod>(["ps.sourcePreview"]);
 

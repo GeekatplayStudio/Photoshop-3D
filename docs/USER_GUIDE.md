@@ -80,14 +80,38 @@ Large layers are scaled down before upload (Settings › Generation › Max imag
 
 ## 4. Library
 
-The **Library** tab shows every model on this computer: generated, imported from Browse, or imported from a file (**Import GLB…** accepts `.glb` and self-contained `.gltf`).
+The **Library** tab shows every model on this computer: generated, imported from Browse, or imported from your own files.
 
 <img src="images/ui-library.png" width="280" alt="Library tab with model previews">
 
 - Click a card to see an interactive 3D preview and its details: service, size, task id.
 - Double-click a card, or use **Pose, light & place in document**, to place it in the active document.
 - **Favorite**, **Rename**, **Re-render preview**, **Delete**. Deleting a model doesn't change layers you already placed, but they can't be re-posed until the model is imported again.
-- **Show folder** opens the library folder; every model is a normal `.glb` you can use elsewhere.
+- **Show folder** opens the library folder in File Explorer / Finder; every model is a normal `.glb` you can use elsewhere. The first time, Photoshop asks: *"The plugin Geekatplay 3D Layers wants to open …\library"*. Click **Allow**.
+
+### Import your own 3D files
+
+There are three ways to add your own models, and each one adds them to the library automatically:
+
+- **Import files…** opens a file browser. Pick one or more files.
+- **Import folder…** adds every 3D file in a folder and its subfolders.
+- **The Import folder:** copy files into the library's *Import* folder in File Explorer / Finder (click **Import folder** in the line under the buttons to open it). While the Library tab is open, new files there are added within a few seconds. Files in it are never moved or deleted; each one is imported once, and again if you change it.
+
+| Format | Notes |
+|---|---|
+| GLB, glTF | Stored as they are. A `.gltf` with separate `.bin` / texture files is packed into one GLB. |
+| FBX, OBJ (+ MTL), DAE (Collada), 3DS, USDZ / USD | Converted to GLB with their materials and textures. |
+| STL, PLY, 3MF, AMF, VRML (WRL), VOX (MagicaVoxel) | Converted to GLB. STL, 3MF, AMF and VOX are turned upright (they are Z-up). |
+
+**Textures:**
+- Keep textures next to the model, or in a subfolder (for example `textures/`). The plugin finds them by name, even when the file points at a folder on another computer (common with FBX).
+- Missing textures are listed in the message after the import.
+- Every converted model is stored as a self-contained GLB; your original file is not changed.
+
+**Conversion details:** the panel converts files with three.js' loaders and GLTFExporter.
+- Phong/Lambert materials become physically based materials.
+- Lights and cameras inside the file are dropped (the 3D editor has its own).
+- Animations are not kept, because a 3D layer is a still pose.
 
 ## 5. Browse your models on each service
 

@@ -8,6 +8,8 @@ import type { EditorInit, EditorResult, HostApi, HostEventName, HostMethod, Requ
 import { DEFAULT_SETTINGS, SECRET_KEYS, mergeSettings, secretPreview, type PublicSettings, type SecretKey, type Settings } from "@shared/settings";
 import { settingsForNewModel } from "@shared/threeD";
 import { PROVIDER_IDS, PROVIDER_LABELS, type AppInfo, type Job, type LibraryItem, type ProviderId, type PsContext, type RemoteItem } from "@shared/types";
+import { base64ToBytes } from "@shared/bytes";
+import type { ImportSource } from "@shared/modelFormats";
 import type { Transport } from "./client";
 
 type Handler = (params: unknown) => unknown;
@@ -16,6 +18,8 @@ declare global {
     interface Window {
         /** Last editor result, for tests. */
         __ps3dEditorResult?: EditorResult | null;
+        /** Models converted by the import, for tests. */
+        __ps3dImported?: { name: string; sourceFormat: string; bytes: number; notes: string[]; images?: number; meshes?: number }[];
     }
 }
 
@@ -47,6 +51,7 @@ export function createMockTransport(): Transport {
         platform: navigator.platform,
         dataFolder: "(mock)",
         libraryFolder: "(mock)/library",
+        importFolder: "(mock)/library/Import",
         logFile: "(mock)/logs/photoshop3d.log",
         libraryBaseUrl: "./",
         repoUrl: "https://github.com/GeekatplayStudio/Photoshop-3D",
@@ -182,7 +187,35 @@ export function createMockTransport(): Transport {
             library = library.filter((i) => i.id !== id);
             emit("library.changed", library);
         },
-        "library.importFile": () => null,
+        // Import: the files in tests/fixtures/public/samples/import, as the host would describe them.
+        "library.pickImport": () => {
+            const dir = "./samples/import/";
+            const resources = ["cube.mtl", "cube.bin", "textures/checker.png"].map((name) => ({ name, url: `${dir}${name}`, path: `${dir}${name}` }));
+            const toConvert: ImportSource[] = ["fbx", "obj", "gltf", "stl", "ply", "usdz"].map((ext) => ({ id: `imp_${ext}`, name: `cube-${ext}`, ext, url: `${dir}cube.${ext}`, path: `${dir}cube.${ext}`, resources }));
+            return { imported: [], toConvert, failed: [{ name: "notes.txt", error: "not a supported 3D file" }] };
+        },
+        "library.scanInbox": () => ({ imported: [], toConvert: [], failed: [] }),
+        "library.readImportFile": async ({ path }) => {
+            const buf = new Uint8Array(await (await fetch(path)).arrayBuffer());
+            let s = "";
+            for (let i = 0; i < buf.length; i++) s += String.fromCharCode(buf[i]);
+            return { base64: btoa(s) };
+        },
+        "library.addConverted": ({ id, name, glbBase64, sourceFormat, notes }) => {
+            const glb = base64ToBytes(glbBase64);
+            const url = URL.createObjectURL(new Blob([glb as BlobPart], { type: "model/gltf-binary" }));
+            const item: LibraryItem = { id: `lib_${id}`, name, origin: "local", modelFile: url, format: "glb", sizeBytes: glb.byteLength, createdAt: Date.now(), importedAt: Date.now(), meta: { sourceFormat, convertedToGlb: true, notes } };
+            const jsonLength = new DataView(glb.buffer, glb.byteOffset).getUint32(12, true);
+            const json = JSON.parse(new TextDecoder().decode(glb.subarray(20, 20 + jsonLength))) as { images?: unknown[]; meshes?: unknown[] };
+            (window.__ps3dImported ??= []).push({ name, sourceFormat, bytes: glb.byteLength, notes: notes ?? [], images: json.images?.length ?? 0, meshes: json.meshes?.length ?? 0 });
+            library = [item, ...library];
+            emit("library.changed", library);
+            return item;
+        },
+        "library.importFailed": ({ id, error }) => {
+            (window.__ps3dImported ??= []).push({ name: id, sourceFormat: "failed", bytes: 0, notes: [error] });
+        },
+        "library.revealInbox": () => undefined,
         "library.saveThumbnail": ({ id, pngBase64 }) => {
             const item = library.find((i) => i.id === id)!;
             item.thumbFile = `data:image/png;base64,${pngBase64}`;

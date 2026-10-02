@@ -196,6 +196,8 @@ export type AppInfo = {
     platform: string;
     dataFolder: string;
     libraryFolder: string;
+    /** Folder whose model files are added to the library automatically (library/Import). */
+    importFolder: string;
     logFile: string;
     /** URL prefix the WebView uses to load library files directly ("../library/"), or null when it must ask the host. */
     libraryBaseUrl: string | null;

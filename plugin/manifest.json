@@ -48,7 +48,7 @@
         "clipboard": "read",
         "launchProcess": {
             "schemes": ["https"],
-            "extensions": [".ccx", ".log", ".glb", ".gltf"]
+            "extensions": [".ccx", ".log", ".glb", ".gltf", ""]
         }
     }
 }

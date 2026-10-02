@@ -2,8 +2,9 @@
  * Library: every model downloaded or imported on this computer, stored in the plugin
  * data folder. Pick one to preview it in 3D and pose it into the active document.
  */
-import { useMemo, useRef, useState } from "react";
-import { Box, FolderOpen, Import, Pencil, Play, RefreshCw, Search, Star, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Box, FolderInput, FolderOpen, Import, Loader2, Pencil, Play, RefreshCw, Search, Star, Trash2, X } from "lucide-react";
+import { SUPPORTED_FORMATS_TEXT, type ImportBatch } from "@shared/modelFormats";
 import { formatBytes } from "@shared/bytes";
 import { PROVIDER_LABELS, type LibraryItem, type ModelOrigin } from "@shared/types";
 import { bridge } from "../bridge/client";
@@ -12,7 +13,11 @@ import { ModelThumb } from "../components/ModelThumb";
 import { Badge, Button, Empty, Select, TextInput, timeAgo } from "../components/ui";
 import { renderModelThumbnail } from "../three/thumbnail";
 import { modelUrl } from "../three/modelSource";
+import { describeReport, enqueueImport, processImportBatch } from "./importModels";
 import { usePanel } from "./store";
+
+/** How often the Import folder is checked while the Library tab is open. */
+const INBOX_SCAN_MS = 6000;
 
 type Filter = "all" | "favorites" | ModelOrigin;
 
@@ -88,7 +93,51 @@ function Details({ item, onClose }: { item: LibraryItem; onClose: () => void }) 
 }
 
 export function LibraryTab() {
-    const { library, info, settings, run } = usePanel();
+    const { library, info, settings, run, toast } = usePanel();
+    const [importStatus, setImportStatus] = useState<string | null>(null);
+
+    /** Converts what the host could not store directly, then reports the result once. */
+    const finishImport = useCallback(
+        async (batch: ImportBatch | null | undefined) => {
+            if (!batch) return;
+            if (batch.toConvert.length) setImportStatus(`Converting ${batch.toConvert.length} file${batch.toConvert.length === 1 ? "" : "s"}…`);
+            const report = await processImportBatch(batch, setImportStatus);
+            const summary = describeReport(report);
+            if (summary) toast(summary.kind, summary.message);
+        },
+        [toast],
+    );
+
+    const importFrom = (folder: boolean) =>
+        void run(() =>
+            enqueueImport(async () => {
+                setImportStatus(folder ? "Choose a folder…" : "Choose 3D files…");
+                try {
+                    const batch = await bridge().call("library.pickImport", { folder });
+                    if (batch) setImportStatus("Reading files…");
+                    await finishImport(batch);
+                } finally {
+                    setImportStatus(null);
+                }
+            }),
+        );
+
+    // Files copied into the Import folder are added while this tab is open.
+    useEffect(() => {
+        let stopped = false;
+        const scan = () =>
+            enqueueImport(async () => {
+                if (stopped) return;
+                const batch = await bridge().call("library.scanInbox");
+                if (batch.imported.length || batch.toConvert.length || batch.failed.length) await finishImport(batch);
+            }).catch((err: Error) => void bridge().call("log.write", { level: "warn", message: "Import folder scan failed", data: err.message }));
+        void scan();
+        const timer = window.setInterval(() => void scan(), INBOX_SCAN_MS);
+        return () => {
+            stopped = true;
+            window.clearInterval(timer);
+        };
+    }, [finishImport]);
     const [query, setQuery] = useState("");
     const [filter, setFilter] = useState<Filter>("all");
     const [selected, setSelected] = useState<string | null>(null);
@@ -119,21 +168,38 @@ export function LibraryTab() {
                     ]}
                 />
             </div>
-            <div className="flex gap-1">
-                <Button size="sm" icon={<Import size={11} />} onClick={() => void run(() => bridge().call("library.importFile"), undefined)}>
-                    Import GLB…
+            <div className="flex flex-wrap gap-1">
+                <Button size="sm" icon={<Import size={11} />} disabled={!!importStatus} onClick={() => importFrom(false)} title={`Add 3D files to the library: ${SUPPORTED_FORMATS_TEXT}`} data-testid="import-files">
+                    Import files…
+                </Button>
+                <Button size="sm" variant="ghost" icon={<FolderInput size={11} />} disabled={!!importStatus} onClick={() => importFrom(true)} title="Add every 3D file in a folder (and its subfolders)">
+                    Import folder…
                 </Button>
                 <Button size="sm" variant="ghost" icon={<FolderOpen size={11} />} onClick={() => void run(() => bridge().call("library.revealFolder"))} title={info?.libraryFolder}>
                     Show folder
                 </Button>
                 <span className="ml-auto self-center text-[10px] text-muted-foreground">{library.length} models</span>
             </div>
+            {importStatus ? (
+                <div className="flex items-center gap-1.5 rounded-md bg-secondary px-2 py-1.5 text-[11px]" role="status" data-testid="import-status">
+                    <Loader2 size={12} className="animate-spin shrink-0" />
+                    <span className="truncate">{importStatus}</span>
+                </div>
+            ) : (
+                <p className="text-[10px] leading-snug text-muted-foreground">
+                    {SUPPORTED_FORMATS_TEXT}. Or copy files into the{" "}
+                    <button type="button" className="text-primary hover:underline" onClick={() => void run(() => bridge().call("library.revealInbox"))} title={info?.importFolder}>
+                        Import folder
+                    </button>
+                    : they are added automatically.
+                </p>
+            )}
 
             {selectedItem && <Details key={selectedItem.id} item={selectedItem} onClose={() => setSelected(null)} />}
 
             {items.length === 0 ? (
                 <Empty icon={<Box size={22} />} title={library.length ? "No matches" : "Your library is empty"}>
-                    {library.length ? "Try another search or filter." : "Generate a model on the Create tab, import one from Browse, or import a .glb file."}
+                    {library.length ? "Try another search or filter." : "Generate a model on the Create tab, import one from Browse, or import 3D files (GLB, FBX, OBJ and more)."}
                 </Empty>
             ) : (
                 <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))" }} data-testid="library-grid">
