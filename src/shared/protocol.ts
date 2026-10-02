@@ -112,6 +112,8 @@ export type HostApi = {
     "update.skip": [{ version: string }, void];
 
     "shell.openExternal": [{ url: string }, void];
+    /** Text on the system clipboard (Ctrl/Cmd+V does not reach inputs in a docked panel: Photoshop takes it). */
+    "clipboard.readText": [void, string];
     "log.write": [{ level: LogLevel; message: string; data?: unknown }, void];
     "log.tail": [{ lines: number }, string];
     "log.reveal": [void, void];

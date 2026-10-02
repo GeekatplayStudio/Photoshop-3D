@@ -13,7 +13,7 @@ import { BridgeServer, type Handlers } from "./bridge/server";
 import { EditorDialog } from "./editor/dialog";
 import { UxpFileStore, joinPath } from "./platform/fileStore";
 import { FileLogger, LOG_FILE } from "./platform/logger";
-import { FileSecretStore, UxpSecretStore, type SecretStore } from "./platform/secrets";
+import { CREDENTIALS_FILE, FileSecretStore, migrateSecrets, type SecretStore } from "./platform/secrets";
 import { getProvider } from "./providers/registry";
 import { imageNodeCandidates, isApiWorkflow, isUiWorkflow } from "./providers/comfyWorkflows";
 import type { ProviderContext } from "./providers/types";
@@ -70,7 +70,7 @@ async function openSharedStore(dataFolder: UxpFolder): Promise<UxpFileStore | nu
 async function migrateFromDataFolder(dataStore: UxpFileStore, sharedStore: UxpFileStore, log: FileLogger) {
     if (await sharedStore.exists("settings.json")) return;
     let copied = 0;
-    for (const file of ["settings.json", "jobs.json", "history.json", "secrets.json"]) {
+    for (const file of ["settings.json", "jobs.json", "history.json", CREDENTIALS_FILE]) {
         const text = await dataStore.readText(file);
         if (text != null) {
             await sharedStore.writeText(file, text);
@@ -107,15 +107,10 @@ export async function startApp() {
         await migrateFromDataFolder(uxpDataStore, dataStore, log).catch((err) => log.warn("Migration from the UXP data folder failed", err));
     }
 
-    let secrets: SecretStore;
-    try {
-        secrets = new UxpSecretStore(storage.secureStorage);
-        await secrets.get("meshy.apiKey");
-    } catch (err) {
-        log.warn("secureStorage unavailable; API keys fall back to secrets.json in the data folder", err);
-        secrets = new FileSecretStore(dataStore);
-    }
-
+    const secrets: SecretStore = new FileSecretStore(dataStore);
+    const migrated = await migrateSecrets(storage.secureStorage, secrets);
+    if (migrated) log.info(`Moved ${migrated} API key(s) from UXP secureStorage to ${dataStore.nativePath(CREDENTIALS_FILE)}`);
+    log.info(`API keys file: ${dataStore.nativePath(CREDENTIALS_FILE)}`);
     const settings = new SettingsService(dataStore, secrets, log);
     await settings.load();
     const library = new Library(dataStore, log);
@@ -187,7 +182,7 @@ export async function startApp() {
         libraryBaseUrl,
         repoUrl: REPO_URL,
         theme: currentTheme(),
-        secretStorage: secrets.kind,
+        credentialsFile: dataStore.nativePath(CREDENTIALS_FILE),
         buildStamp: build.stamp,
     });
 
@@ -421,6 +416,12 @@ export async function startApp() {
         "shell.openExternal": async ({ url }) => {
             if (!/^https:\/\//i.test(url)) throw new Error("Only https links can be opened.");
             await shell.openExternal(url, "Open a link from Geekatplay 3D Layers");
+        },
+        "clipboard.readText": async () => {
+            const clip = (navigator as unknown as { clipboard?: { readText?: () => Promise<string>; getContent?: () => Promise<Record<string, unknown>> } }).clipboard;
+            if (clip?.readText) return String((await clip.readText()) ?? "");
+            if (clip?.getContent) return String((await clip.getContent())?.["text/plain"] ?? "");
+            throw new Error("Clipboard access is not available in this Photoshop version.");
         },
         "log.write": ({ level, message, data }) => {
             log[level](`[web] ${message}`, data);

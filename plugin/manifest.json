@@ -45,6 +45,7 @@
             "allowLocalRendering": "yes",
             "enableMessageBridge": "localAndRemote"
         },
+        "clipboard": "read",
         "launchProcess": {
             "schemes": ["https"],
             "extensions": [".ccx", ".log", ".glb", ".gltf"]

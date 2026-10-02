@@ -1,9 +1,9 @@
 /**
  * Plugin settings: defaults, validation and the public (secret-free) view.
  *
- * Settings live in <plugin data>/settings.json. API keys never go there: they are
- * kept in UXP secureStorage (encrypted by the OS) and only "is set" + a short
- * preview cross the bridge. `sanitizeSettings` is the single gate every load and
+ * Settings live in settings.json in the shared user-data folder. API keys never go
+ * there: they are kept in credentials.json (see src/host/platform/secrets.ts) and only
+ * "is set" + a short preview cross the bridge. `sanitizeSettings` is the single gate every load and
  * every update goes through, so a hand-edited or old settings file can never put
  * the plugin into an invalid state.
  */

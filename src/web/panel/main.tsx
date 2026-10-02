@@ -5,6 +5,9 @@ import "../styles.css";
 import { getBridge } from "../bridge/client";
 import { PanelApp } from "./App";
 import { PanelProvider } from "./store";
+import { installTooltips } from "../components/tooltips";
+
+installTooltips();
 
 window.addEventListener("error", (e) => {
     void getBridge().then((b) => b.call("log.write", { level: "error", message: `panel: ${e.message}`, data: { file: e.filename, line: e.lineno } }));

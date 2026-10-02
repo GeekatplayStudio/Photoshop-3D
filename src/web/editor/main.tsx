@@ -11,6 +11,9 @@ import type { LightingDefaults } from "@shared/threeD";
 import { bridge, getBridge } from "../bridge/client";
 import { modelUrl, resolveLibraryBase } from "../three/modelSource";
 import ThreeDLayerEditor from "./ThreeDLayerEditor";
+import { installTooltips } from "../components/tooltips";
+
+installTooltips();
 
 function EditorApp() {
     const [init, setInit] = useState<EditorInit | null>(null);

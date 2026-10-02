@@ -1,75 +1,96 @@
 /**
  * API keys and other credentials.
  *
- * In Photoshop they live in UXP secureStorage, which the OS encrypts per user
- * (DPAPI on Windows, Keychain on macOS); they are never written to settings.json
- * or the log. If secureStorage is unavailable (very old UXP), keys fall back to
- * secrets.json in the plugin data folder, and the Settings tab says so.
+ * They are kept in credentials.json in the shared user-data folder
+ * (%APPDATA%\Geekatplay\3D Layers on Windows, ~/Library/Application Support/Geekatplay/3D Layers
+ * on macOS): readable only by your OS user account, never written to settings.json, never
+ * logged (see logger.ts redact), and kept across plugin updates — the same approach as the
+ * GitHub and AWS command-line tools.
+ *
+ * Why not UXP secureStorage: it lives inside the plugin's UXP storage folder, which Adobe's
+ * installer deletes whenever an installed copy is removed (verified with UPIA 8.5: the store
+ * came back empty after an update), so every update would lose the keys. Keys found there
+ * are migrated once (see migrateSecrets).
  */
 import type { SecretKey } from "@shared/settings";
+import { SECRET_KEYS } from "@shared/settings";
 import { utf8Decode } from "@shared/bytes";
 import type { FileStore } from "./fileStore";
-import { readJson, writeJson } from "./fileStore";
 
 export interface SecretStore {
-    readonly kind: "secureStorage" | "file" | "memory";
+    readonly kind: "file" | "secureStorage" | "memory";
     get(key: SecretKey): Promise<string>;
     set(key: SecretKey, value: string): Promise<void>;
 }
 
-const PREFIX = "photoshop3d.";
+export const CREDENTIALS_FILE = "credentials.json";
 
-type SecureStorage = {
-    getItem(key: string): Promise<Uint8Array | string | null | undefined>;
-    setItem(key: string, value: string | Uint8Array): Promise<void>;
-    removeItem(key: string): Promise<void>;
-};
+type CredentialsFile = { _note: string; keys: Partial<Record<SecretKey, string>> };
 
-export class UxpSecretStore implements SecretStore {
-    readonly kind = "secureStorage" as const;
-    private cache = new Map<SecretKey, string>();
-
-    constructor(private readonly secure: SecureStorage) {}
-
-    async get(key: SecretKey): Promise<string> {
-        if (this.cache.has(key)) return this.cache.get(key)!;
-        let value = "";
-        try {
-            const raw = await this.secure.getItem(PREFIX + key);
-            if (raw instanceof Uint8Array) value = utf8Decode(raw);
-            else if (typeof raw === "string") value = raw;
-            else if (raw && typeof raw === "object" && "byteLength" in (raw as object)) value = utf8Decode(new Uint8Array(raw as ArrayBuffer));
-        } catch {
-            value = "";
-        }
-        this.cache.set(key, value);
-        return value;
-    }
-
-    async set(key: SecretKey, value: string): Promise<void> {
-        const v = value.trim();
-        if (v) await this.secure.setItem(PREFIX + key, v);
-        else await this.secure.removeItem(PREFIX + key).catch(() => undefined);
-        this.cache.set(key, v);
-    }
-}
+const NOTE = "API keys for Geekatplay 3D Layers. Keep this file private; delete a key here or in the plugin's Settings tab.";
 
 export class FileSecretStore implements SecretStore {
     readonly kind = "file" as const;
-    constructor(private readonly store: FileStore, private readonly path = "secrets.json") {}
+    private cache: Partial<Record<SecretKey, string>> | null = null;
 
-    private async all(): Promise<Record<string, string>> {
-        return (await readJson<Record<string, string>>(this.store, this.path)) ?? {};
+    constructor(
+        private readonly store: FileStore,
+        private readonly path = CREDENTIALS_FILE,
+    ) {}
+
+    private async all(): Promise<Partial<Record<SecretKey, string>>> {
+        if (this.cache) return this.cache;
+        const text = await this.store.readText(this.path);
+        let keys: Partial<Record<SecretKey, string>> = {};
+        if (text) {
+            try {
+                const parsed = JSON.parse(text) as Partial<CredentialsFile>;
+                keys = parsed.keys && typeof parsed.keys === "object" ? parsed.keys : {};
+            } catch {
+                keys = {};
+            }
+        }
+        this.cache = keys;
+        return keys;
     }
+
     async get(key: SecretKey) {
         return (await this.all())[key] ?? "";
     }
+
     async set(key: SecretKey, value: string) {
-        const all = await this.all();
+        const all = { ...(await this.all()) };
         if (value.trim()) all[key] = value.trim();
         else delete all[key];
-        await writeJson(this.store, this.path, all);
+        // Written directly (no .tmp copy) so there is exactly one file holding keys.
+        await this.store.writeText(this.path, JSON.stringify({ _note: NOTE, keys: all } satisfies CredentialsFile, null, 2));
+        this.cache = all;
     }
+}
+
+type SecureStorage = {
+    getItem(key: string): Promise<Uint8Array | string | null | undefined>;
+    removeItem(key: string): Promise<void>;
+};
+
+/** Moves keys from UXP secureStorage (used by early builds) into the credentials file. */
+export async function migrateSecrets(secure: SecureStorage | undefined, target: SecretStore): Promise<number> {
+    if (!secure) return 0;
+    let moved = 0;
+    for (const key of SECRET_KEYS) {
+        try {
+            const raw = await secure.getItem(`photoshop3d.${key}`);
+            const value = raw instanceof Uint8Array ? utf8Decode(raw) : typeof raw === "string" ? raw : "";
+            if (value.trim() && !(await target.get(key))) {
+                await target.set(key, value);
+                moved++;
+            }
+            if (value) await secure.removeItem(`photoshop3d.${key}`).catch(() => undefined);
+        } catch {
+            // secureStorage unavailable or empty: nothing to migrate
+        }
+    }
+    return moved;
 }
 
 export class MemorySecretStore implements SecretStore {

@@ -2,8 +2,8 @@
  * Create: send the active layer / selection to a 3D service and follow the jobs.
  * Also the home of "Edit 3D layer" when the active layer is one of ours.
  */
-import { useEffect, useState } from "react";
-import { AlertTriangle, Box, CheckCircle2, Clock, ImageOff, Pencil, Play, RefreshCw, Send, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Box, CheckCircle2, Clock, ImageOff, Pencil, Play, RefreshCw, Send, Trash2, Unlink, X } from "lucide-react";
 import { PROVIDER_LABELS, type Job, type ProviderId, type SendSource } from "@shared/types";
 import { bridge } from "../bridge/client";
 import { Badge, Button, Empty, Field, ProgressBar, Section, Select, TextInput, timeAgo } from "../components/ui";
@@ -94,8 +94,14 @@ export function CreateTab({ onOpenLibrary, onOpenSettings }: { onOpenLibrary: ()
     const [previewError, setPreviewError] = useState<string | null>(null);
     const [sending, setSending] = useState(false);
 
+    // Start with the last service used (saved as the default provider).
+    const initialised = useRef(false);
     useEffect(() => {
-        if (settings) setProvider((p) => p ?? settings.defaultProvider);
+        if (settings && !initialised.current) {
+            initialised.current = true;
+            setProvider(settings.defaultProvider);
+            setSource(settings.send.source);
+        }
     }, [settings]);
 
     // Refresh the "what will be sent" preview when Photoshop's context changes.
@@ -124,6 +130,7 @@ export function CreateTab({ onOpenLibrary, onOpenSettings }: { onOpenLibrary: ()
         await run(async () => {
             await bridge().call("generate.start", { providerId: provider, source, name: name.trim() || undefined });
             setName("");
+            if (settings && (settings.defaultProvider !== provider || settings.send.source !== source)) await bridge().call("settings.update", { defaultProvider: provider, send: { source } });
         }, `Sent to ${PROVIDER_LABELS[provider]}`);
         setSending(false);
     };
@@ -143,6 +150,8 @@ export function CreateTab({ onOpenLibrary, onOpenSettings }: { onOpenLibrary: ()
                     <Button size="sm" variant="primary" icon={<Pencil size={11} />} onClick={() => void run(() => bridge().call("editor.editActiveLayer"))} data-testid="edit-3d-layer">
                         Edit pose & light
                     </Button>
+                    <Button size="sm" variant="ghost" icon={<Unlink size={11} />} title="Detach 3D data: the layer becomes an ordinary smart object (double-click edits its pixels)" onClick={() => void run(() => bridge().call("layer.detach3D"), "3D data removed from the layer")} />
+
                 </div>
             )}
 

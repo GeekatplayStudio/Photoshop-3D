@@ -1,0 +1,136 @@
+# User guide
+
+## 1. Install
+
+You need Photoshop 2025 (version 26) or newer and the Creative Cloud desktop app (it provides Adobe's plugin installer).
+
+| Platform | How |
+|---|---|
+| Windows | Download `install-windows.cmd` and `install-windows.ps1` from the [latest release](https://github.com/GeekatplayStudio/Photoshop-3D/releases/latest) into one folder, then double-click `install-windows.cmd`. Or, in PowerShell: `irm https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-windows.ps1 \| iex` |
+| macOS | In Terminal: `curl -fsSL https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-macos.command \| bash`. Or download `install-macos.command` and run `bash install-macos.command`. |
+| Any | Double-click `geekatplay-3d-layers-<version>.ccx` from the release; Creative Cloud asks you to confirm and installs it. |
+
+The script prints each step: find Adobe's installer → download the release → verify its SHA-256 checksum → remove the previous copy → install → confirm Photoshop registered it. Photoshop can stay open. To install a specific file instead, run `install-windows.ps1 -Ccx <file.ccx>` or `bash install-macos.command <file.ccx>`.
+
+Open the panel with **Plugins › Geekatplay 3D Layers › 3D Layers**. The same menu also has **Edit 3D Layer (Pose & Light)…** and **Check for Updates…**.
+
+## 2. Set up your services
+
+Open the panel's **Settings** tab. Each service has a section with its options and a **Test connection** button, which confirms the key or address works and shows your balance.
+
+API keys can be typed or pasted with the clipboard button next to the field. Ctrl/Cmd+V does not work inside docked panels because Photoshop keeps that shortcut for itself. Keys are saved in `credentials.json` in your user-data folder (see section 10). They are never written to the log or to `settings.json`, and they survive updates.
+
+### Meshy
+- **API key:** from meshy.ai → Settings → API (`msy_…`). Creating tasks requires a paid Meshy plan.
+- **AI model:** `latest` (currently Meshy 7.1), `meshy-7.1`, `meshy-6`, `meshy-6-lite`. Use **…** to type any other model id.
+- **Geometry detail:** standard / 2k / 4k (2k and 4k need meshy-7.1 or latest).
+- **Texture size:** 2k / 4k / 8k.
+- **Other options:** PBR maps, remove lighting (meshy-6), image enhancement, and remesh (topology and target polycount).
+- **Download deadline:** Meshy keeps generated files for **3 days**. The plugin downloads them as soon as a job finishes, but use **Browse** to import older Meshy tasks before they expire.
+
+### Tripo
+- **API key:** from platform.tripo3d.ai → API keys (`tsk_…`). The plugin uses Tripo's **API v3**; Tripo shuts down API v2 on 2026-11-01.
+- **Model version:** `v3.1-20260211` (default), `v3.0-20250812`, `v2.5-20250123`, `P1-20260311`.
+- **Other options:** texture and geometry quality, PBR, smart low-poly, face limit, real-world size, orientation.
+
+### Hitem3D (hi3d.ai)
+- **Credentials:** an **Access Key** and **Secret Key** from hitem3d.ai. You can also paste `AK:SK` into the first field, or a bearer token. The plugin signs in and refreshes the token itself. The **App ID** is optional.
+- **Model and resolution:** `hi3dv3.0` (2048quality/2048master), `hitem3dv2.1`, `hitem3dv2.0`, `hitem3dv1.5`, or the portrait models. The resolution list follows the chosen model.
+- **Other options:** geometry + texture or geometry only, face count (0 = Hitem3D default), PBR, and Hitem3D-side background removal.
+- **Download deadline:** Hitem3D links expire after **1 hour**; the plugin downloads results immediately.
+
+### ComfyUI (local or on your network)
+- **Server address:** for example `http://127.0.0.1:8188`, or another machine's IP if ComfyUI was started with `--listen`.
+- **Workflow:**
+  - **TRELLIS.2 (built in):** needs ComfyUI with the native TRELLIS.2 nodes (ComfyUI 0.3x or newer) and these model files: `trellis_2_int8_convrot.safetensors` (diffusion_models), `trellis_2_shape_vae_bf16.safetensors` and `trellis_2_texture_vae_bf16.safetensors` (vae), `dino_v3_L_naf_fp32.safetensors` (clip_vision), and `birefnet.safetensors` (background removal). The easiest way to get them is to open ComfyUI's template **"Pixal3D & TRELLIS.2: Image to Model"**, which offers to download them. **Test connection** lists anything missing. A model takes about 4–5 minutes on an RTX 3090.
+  - **Object mask:** *Use layer transparency* (default) cuts the object out exactly where your layer is transparent. Opaque images go through BiRefNet background removal. *Always remove background* runs BiRefNet on everything.
+  - **Custom workflow:** export your workflow from ComfyUI with **Workflow › Export (API)** and choose the file. It needs a **Load Image** node, which receives the layer, and a node that saves a `.glb` (for example **Save GLB**). If the workflow has several Load Image nodes, pick the right one in Settings.
+- **Seed, texture size, max faces, timeout:** apply to the built-in workflow; seed −1 means random.
+
+## 3. Make a 3D model from a layer
+
+1. Select a layer, or make a selection. For best results, cut the object out on a transparent background.
+2. **Create** tab → choose the **Source**:
+   - *Selection if any, else layer* (default)
+   - *Active layer*
+   - *Visible pixels in selection* (masked by the selection, so soft edges stay soft)
+3. Choose the **3D service** and optionally a name, then click **Generate 3D model**.
+4. The job appears under **Jobs** with progress. You can keep working or close the panel. Jobs resume after a Photoshop restart.
+5. When it says **Ready**, the model is in your library. Click **Pose & place** to open the editor; the result is placed over the original layer's area.
+
+Large layers are scaled down before upload (Settings › Generation › Max image size sent, default 2048 px). If a job fails, **Retry** resends the saved image, or downloads fresh links if the service had already finished.
+
+## 4. Library
+
+The **Library** tab shows every model on this computer: generated, imported from Browse, or imported from a file (**Import GLB…** accepts `.glb` and self-contained `.gltf`).
+- Click a card to see an interactive 3D preview and its details: service, size, task id.
+- Double-click a card, or use **Pose, light & place in document**, to place it in the active document.
+- **Favorite**, **Rename**, **Re-render preview**, **Delete**. Deleting a model doesn't change layers you already placed, but they can't be re-posed until the model is imported again.
+- **Show folder** opens the library folder; every model is a normal `.glb` you can use elsewhere.
+
+## 5. Browse your models on each service
+
+**Browse** → pick a service:
+- **Meshy:** your image-to-3D, multi-image-to-3D and text-to-3D tasks made with this API key, newest first. Expired tasks (older than 3 days) can't be downloaded.
+- **Tripo:** built from your account's usage history, because Tripo has no "list my models" API.
+- **Hitem3D:** the tasks this plugin submitted (Hitem3D has no list API). Use **Track a task ID** for a task you started on the website or another computer.
+- **ComfyUI:** every job in ComfyUI's history that saved a `.glb`. ComfyUI forgets history when it restarts; older files are in ComfyUI's `output` folder, so import them with **Library › Import GLB…**.
+
+**Import** downloads the model into your library; **In library · Place** places it.
+
+## 6. The 3D pose & light editor
+
+| Area | Controls |
+|---|---|
+| Viewport | Drag to orbit, right-drag to pan, scroll to zoom. Drag the **sun** to set the light direction. The viewport has the export's aspect ratio, so what you frame is what you get. |
+| Light presets | Studio, Golden Hour, Noon, Dramatic, Rim, Soft, Moonlight |
+| Light | Sun widget on/off, intensity, distance, ambient, color (swatches, temperature in K, hex) |
+| Environment | Studio, city, apartment, dawn, sunset, forest, park, night, lobby, warehouse; intensity; *show as background* (otherwise the background is transparent) |
+| Shadows | Cast shadow (blur, intensity) and contact shadow (blur, intensity) |
+| Pose | Turn (Y), tilt (X), roll (Z), scale; reset |
+| Camera | Front, ¾ left, ¾ right, side, top, reset; field of view |
+| Export resolution | Width/height up to 8192 px, presets 512–4096, **Match document** |
+
+**Place in Document** / **Update Layer** renders at the export resolution with a transparent background and closes the editor. **Esc** cancels and **Ctrl/Cmd+Enter** confirms. Lighting you set for a new model is remembered for the next new model (Settings › 3D editor); reopened layers keep their own settings.
+
+## 7. Re-pose a 3D layer later
+
+A placed render is a smart object named `<model> (3D)`. Its pose, lighting, camera and resolution are saved in the layer's XMP metadata inside the PSD.
+
+- **Double-click the layer thumbnail.** Photoshop starts opening the smart object; the plugin closes that again and opens the 3D editor with the saved settings. Turn this off in Settings › 3D editor if you want to edit the smart object's pixels instead.
+- Or select the layer and use the panel's **Edit pose & light** banner, or **Plugins › Geekatplay 3D Layers › Edit 3D Layer (Pose & Light)…**.
+
+**Update Layer** replaces the smart object's contents. The layer keeps its position, scale, rotation, masks, effects, blend mode and name, even if you change the export resolution. Undo it in one step with Ctrl/Cmd+Z ("Update 3D Layer").
+
+If you open the PSD on a computer that doesn't have the model, the plugin downloads it again from the service (for Meshy, only within its 3-day window). Otherwise it asks you to import the GLB.
+
+The **detach** button (broken-chain icon) in the panel's 3D-layer banner removes the 3D data, and the layer becomes an ordinary smart object. If you rasterize a 3D layer, it can still be re-posed; the update is then placed as a new smart object on top of it.
+
+## 8. Updates
+
+The plugin checks the GitHub releases of `GeekatplayStudio/Photoshop-3D` when Photoshop starts, at most every 12 hours (Settings › Updates). When a newer version exists, a banner appears with **Update**:
+1. The plugin downloads `geekatplay-3d-layers-<version>.ccx` and checks it against the release's `SHA256SUMS.txt`.
+2. It opens the file with Creative Cloud's installer. Confirm if Creative Cloud asks.
+3. Photoshop reloads the plugin. Your library, settings and keys are kept.
+
+You can also check manually (**Check now**, or **Plugins › … › Check for Updates…**), skip a version, include pre-releases, or rerun the install script at any time.
+
+## 9. Uninstall
+
+- Windows: run `uninstall-windows.cmd`, or `install-windows.ps1 -Uninstall`. Add `-RemoveData` to also delete your library and keys.
+- macOS: `bash uninstall-macos.command`. Add `--remove-data` to delete your data too.
+- Or remove it in the Creative Cloud app under **Stock & Marketplace › Plugins**.
+
+## 10. Files the plugin uses
+
+| Path (in the user-data folder) | Contents |
+|---|---|
+| `library/index.json` | The library list |
+| `library/<id>/model.glb`, `thumb.png`, `source.png`, `info.json` | Each model, its preview, the image that generated it, and its metadata |
+| `settings.json` | Your settings (no keys) |
+| `credentials.json` | API keys |
+| `jobs.json`, `jobs/<id>/source.png` | Running and recent jobs (images are deleted when a job finishes) |
+| `history.json` | Every task submitted (provider, task id, time) |
+| `logs/photoshop3d.log` | Everything the plugin did: requests (without keys), jobs, Photoshop operations, errors |
+
+The user-data folder is `%APPDATA%\Geekatplay\3D Layers` on Windows and `~/Library/Application Support/Geekatplay/3D Layers` on macOS. **Settings › Diagnostics** shows these paths, versions and the recent log.

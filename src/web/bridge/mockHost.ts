@@ -51,7 +51,7 @@ export function createMockTransport(): Transport {
         libraryBaseUrl: "./",
         repoUrl: "https://github.com/GeekatplayStudio/Photoshop-3D",
         theme: "dark",
-        secretStorage: "memory",
+        credentialsFile: "(mock)/credentials.json",
         buildStamp: "dev",
     };
 
@@ -217,6 +217,7 @@ export function createMockTransport(): Transport {
         "shell.openExternal": ({ url }) => {
             window.open(url, "_blank");
         },
+        "clipboard.readText": () => navigator.clipboard.readText(),
         "log.write": ({ level, message, data }) => {
             console[level === "debug" ? "log" : level](`[mock host] ${message}`, data ?? "");
         },

@@ -2,7 +2,8 @@
  * Small UI kit for the panel, styled to sit quietly inside Photoshop.
  */
 import React, { useState } from "react";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ClipboardPaste, Loader2 } from "lucide-react";
+import { bridge } from "../bridge/client";
 import { Dropdown } from "./Dropdown";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger"; size?: "sm" | "md"; busy?: boolean; icon?: React.ReactNode };
@@ -21,6 +22,35 @@ export function Button({ variant = "secondary", size = "md", busy, icon, childre
             {busy ? <Loader2 size={13} className="animate-spin" /> : icon}
             {children}
         </button>
+    );
+}
+
+/**
+ * Pastes the clipboard into a field. Needed in the docked panel: Photoshop keeps Ctrl/Cmd+V
+ * for its own Paste, so the shortcut never reaches inputs inside the panel's WebView.
+ */
+export function PasteButton({ onPaste, title = "Paste from clipboard" }: { onPaste: (text: string) => void; title?: string }) {
+    const [busy, setBusy] = useState(false);
+    return (
+        <Button
+            size="md"
+            variant="ghost"
+            title={title}
+            aria-label={title}
+            busy={busy}
+            icon={<ClipboardPaste size={13} />}
+            onClick={async () => {
+                setBusy(true);
+                try {
+                    const text = (await bridge().call("clipboard.readText")).trim();
+                    if (text) onPaste(text);
+                } catch {
+                    // Clipboard unavailable: the user can still type.
+                } finally {
+                    setBusy(false);
+                }
+            }}
+        />
     );
 }
 

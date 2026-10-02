@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CloudDownload, Info, Loader2, Play, RefreshCw, Search } from "lucide-react";
 import { PROVIDER_LABELS, type ProviderId, type RemoteItem } from "@shared/types";
 import { bridge } from "../bridge/client";
-import { Badge, Button, Empty, Section, Select, TextInput, timeAgo } from "../components/ui";
+import { Badge, Button, Empty, PasteButton, Section, Select, TextInput, timeAgo } from "../components/ui";
 import { usePanel } from "./store";
 
 const PAGE_SIZE = 24;
@@ -145,6 +145,7 @@ export function BrowseTab() {
                 <p className="text-[10px] text-muted-foreground leading-snug">Started a generation on the {PROVIDER_LABELS[provider]} website or another computer? Paste its task id to download the result here.</p>
                 <div className="flex gap-1">
                     <TextInput value={taskId} onChange={(e) => setTaskId(e.target.value)} placeholder="task id" />
+                    <PasteButton onPaste={setTaskId} />
                     <Button
                         disabled={!taskId.trim()}
                         onClick={() =>

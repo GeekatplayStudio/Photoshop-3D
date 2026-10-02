@@ -1,0 +1,69 @@
+# Runs on every push and pull request: typecheck, unit tests, build, package,
+# package verification, browser tests of the UI and installer script checks.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Build, package and verify the .ccx
+        run: npm run dist && node scripts/verify-package.mjs
+      - name: Browser tests (panel + 3D editor against the mock host)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-package
+          path: |
+            dist/release/*.ccx
+            dist/release/SHA256SUMS.txt
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
+  installer-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bash syntax (macOS installers)
+        run: |
+          bash -n install/install-macos.command
+          bash -n install/uninstall-macos.command
+      - name: PowerShell syntax (Windows installer)
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD/install/install-windows.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          Write-Host "install-windows.ps1 parses cleanly"
+      - name: Windows scripts keep CRLF line endings
+        run: |
+          for f in install/*.cmd install/*.ps1; do
+            if ! grep -q $'\r' "$f"; then echo "$f lost its CRLF line endings"; exit 1; fi
+          done

@@ -202,7 +202,7 @@ export type AppInfo = {
     repoUrl: string;
     /** Photoshop UI theme: darkest | dark | light | lightest. */
     theme: string;
-    /** Where API keys are kept: "secureStorage" (OS-encrypted) or "file" (fallback). */
-    secretStorage: string;
+    /** The file holding API keys (in the shared user-data folder). */
+    credentialsFile: string;
     buildStamp: string;
 };

@@ -18,7 +18,7 @@ import {
 import { DEFAULT_LIGHTING } from "@shared/threeD";
 import { PROVIDER_IDS, PROVIDER_LABELS, type ProviderId, type ProviderTestResult } from "@shared/types";
 import { bridge } from "../bridge/client";
-import { Badge, Button, Field, Section, Select, TextInput, Toggle } from "../components/ui";
+import { Badge, Button, Field, PasteButton, Section, Select, TextInput, Toggle } from "../components/ui";
 import { usePanel } from "./store";
 
 /** Text/number input that commits on blur or Enter (avoids a settings write per keystroke). */
@@ -28,7 +28,14 @@ function CommitInput({ value, onCommit, type = "text", placeholder, min, max }: 
     const commit = () => {
         if (local !== String(value)) onCommit(local);
     };
-    return <TextInput type={type} value={local} min={min} max={max} placeholder={placeholder} onChange={(e) => setLocal(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === "Enter" && commit()} />;
+    const input = <TextInput type={type} value={local} min={min} max={max} placeholder={placeholder} onChange={(e) => setLocal(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === "Enter" && commit()} />;
+    if (type !== "text") return input;
+    return (
+        <div className="flex gap-1">
+            {input}
+            <PasteButton onPaste={(text) => (setLocal(text), onCommit(text))} />
+        </div>
+    );
 }
 
 function SecretField({ label, secretKey, settings, placeholder, hint }: { label: string; secretKey: SecretKey; settings: PublicSettings; placeholder?: string; hint?: ReactNode }) {
@@ -49,6 +56,7 @@ function SecretField({ label, secretKey, settings, placeholder, hint }: { label:
             {editing ? (
                 <div className="flex gap-1">
                     <TextInput type="password" autoComplete="off" value={value} onChange={(e) => setValue(e.target.value)} placeholder={placeholder} onKeyDown={(e) => e.key === "Enter" && value.trim() && void save(value)} />
+                    <PasteButton onPaste={(text) => void save(text)} title={`Paste ${label} from the clipboard and save it`} />
                     <Button size="md" variant="primary" disabled={!value.trim()} onClick={() => void save(value)}>
                         Save
                     </Button>
@@ -156,7 +164,7 @@ export function SettingsTab() {
     return (
         <div className="p-2 space-y-2" data-testid="settings">
             <Section title="Meshy" defaultOpen={settings.defaultProvider === "meshy"} right={settings.secrets["meshy.apiKey"].set ? <Badge tone="success">Ready</Badge> : <Badge tone="warning">No key</Badge>}>
-                <SecretField label="API key" secretKey="meshy.apiKey" settings={settings} placeholder="msy_…" hint={<>From <Link href="https://www.meshy.ai/settings/api">meshy.ai → Settings → API</Link>. Stored encrypted by the OS.</>} />
+                <SecretField label="API key" secretKey="meshy.apiKey" settings={settings} placeholder="msy_…" hint={<>From <Link href="https://www.meshy.ai/settings/api">meshy.ai → Settings → API</Link>. Kept in your user profile, never in logs.</>} />
                 <Field label="AI model">
                     <ModelSelect value={m.aiModel} known={MESHY_AI_MODELS} onChange={(v) => set({ meshy: { aiModel: v } })} />
                 </Field>
@@ -396,7 +404,7 @@ export function SettingsTab() {
                                 ["Host", `${info.hostName} ${info.hostVersion}`],
                                 ["UXP", info.uxpVersion],
                                 ["Platform", info.platform],
-                                ["API keys", info.secretStorage === "secureStorage" ? "OS-encrypted secure storage" : info.secretStorage],
+                                ["API keys file", info.credentialsFile],
                                 ["Data folder", info.dataFolder],
                                 ["Log file", info.logFile],
                             ] as const).map(([k, v]) => (
