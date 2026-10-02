@@ -24,13 +24,17 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     const install = [
         "",
         "### Install or update",
-        "- **Windows:** download `install-windows.cmd` and `install-windows.ps1` into one folder and double-click `install-windows.cmd`, or run in PowerShell:",
-        "  `irm https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-windows.ps1 | iex`",
-        "- **macOS:** `curl -fsSL https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-macos.command | bash`",
-        "- **Any OS:** double-click `geekatplay-3d-layers-" + version + ".ccx` (Creative Cloud installs it).",
-        "- **Already installed:** the plugin offers this update in its panel (Settings › Updates).",
+        "1. Download **`geekatplay-3d-layers-" + version + ".ccx`** below and double-click it.",
+        "2. Creative Cloud warns that the plugin isn't from the Adobe Marketplace. Click **Install**.",
+        "3. In Photoshop: **Plugins › Geekatplay 3D Layers › 3D Layers**.",
         "",
-        "Checksums: `SHA256SUMS.txt`.",
+        "If that doesn't work: on **Windows** download `install-windows.cmd` and double-click it, or paste this into PowerShell:",
+        "`irm https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-windows.ps1 | iex`",
+        "On **macOS** paste this into Terminal:",
+        "`curl -fsSL https://raw.githubusercontent.com/GeekatplayStudio/Photoshop-3D/main/install/install-macos.command | bash`",
+        "",
+        "**Already installed?** The plugin offers this update in its panel: click **Update**, then **Allow**.",
+        "Step-by-step guide with pictures: [docs/INSTALL.md](https://github.com/GeekatplayStudio/Photoshop-3D/blob/main/docs/INSTALL.md). Checksums: `SHA256SUMS.txt`.",
     ].join("\n");
     process.stdout.write(`${notes ?? `Release ${version}.`}\n${install}\n`);
 }
