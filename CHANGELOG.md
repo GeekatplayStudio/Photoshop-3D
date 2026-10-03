@@ -4,6 +4,24 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+### Added
+- **Library folders:**
+  - Create folders and subfolders, open them by clicking, and go back up with the path above the grid.
+  - Rename or delete folders. Deleting a folder moves its models up a level; it never deletes them.
+  - Search looks in every folder.
+  - Folders are virtual (stored in the library index), so moving models never touches their files or placed layers.
+- **Drag and drop:**
+  - Drag models onto a folder or the path to move them.
+  - Drag 3D files or whole folders from File Explorer / Finder onto the Library to import them into the open folder (Photoshop 2026 / UXP 9.1+).
+  - **Import folder…** and subfolders of the Import folder become library folders.
+- **Removing models:**
+  - Select several with Ctrl/Cmd+click, Shift+click or Ctrl/Cmd+A, then **Move to…** or **Remove** them.
+  - The **Delete** key removes the selection after asking.
+  - Each card has a quick remove button.
+
+### Changed
+- The development server uses port 5317 (fixed), so the browser tests never run against another project's server.
+
 ## [0.1.3] - 2026-10-02
 
 ### Added

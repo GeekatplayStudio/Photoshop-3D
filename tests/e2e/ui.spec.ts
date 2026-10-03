@@ -146,3 +146,124 @@ test.describe("import", () => {
         expect(errors).toEqual([]);
     });
 });
+
+test.describe("library folders", () => {
+    test.use({ viewport: { width: 360, height: 900 } });
+
+    test("creates folders, moves models by drag and drop, renames and deletes folders", async ({ page }) => {
+        await page.goto("/panel.html");
+        await page.getByTestId("tab-library").click();
+        const cards = page.getByTestId("library-card");
+        await expect(cards).toHaveCount(2);
+
+        await page.getByTestId("new-folder").click();
+        await page.getByTestId("new-folder-name").fill("Characters");
+        await page.keyboard.press("Enter");
+        const tile = page.locator('[data-testid="folder-tile"][data-folder="Characters"]');
+        await expect(tile).toContainText("0 models");
+
+        // Drag a card onto the folder.
+        await cards.filter({ hasText: "Totem (sample)" }).dragTo(tile);
+        await expect(cards).toHaveCount(1);
+        await expect(tile).toContainText("1 model");
+
+        // Open it; the breadcrumb shows where we are.
+        await tile.getByRole("button", { name: /1 model/ }).click();
+        await expect(page.getByTestId("crumb").last()).toHaveText("Characters");
+        await expect(cards).toHaveCount(1);
+        await expect(cards.first()).toContainText("Totem (sample)");
+
+        // A subfolder, then drag the model back to the top level via the breadcrumb.
+        await page.getByTestId("new-folder").click();
+        await page.getByTestId("new-folder-name").fill("Robots");
+        await page.getByRole("button", { name: "Create" }).click();
+        await expect(page.getByTestId("folder-tile")).toHaveCount(1);
+        await cards.first().dragTo(page.getByTestId("crumb").first());
+        await expect(cards).toHaveCount(0);
+        await page.getByTestId("crumb").first().click();
+        await expect(cards).toHaveCount(2);
+
+        // Search looks in every folder.
+        await page.getByTestId("tab-library").click();
+        await cards.filter({ hasText: "Meshy totem" }).click();
+        await page.getByTestId("details-folder").click();
+        await page.getByRole("option", { name: "Characters › Robots" }).click();
+        await expect(cards).toHaveCount(1);
+        await page.getByPlaceholder("Search all folders").fill("meshy");
+        await expect(cards).toHaveCount(1);
+        await expect(cards.first()).toContainText("Characters › Robots");
+        await page.getByPlaceholder("Search all folders").fill("");
+
+        // Rename, then delete: its contents move up a level.
+        await tile.getByTestId("folder-rename").click();
+        await tile.locator("input").fill("Heroes");
+        await tile.locator("input").press("Enter");
+        const heroes = page.locator('[data-testid="folder-tile"][data-folder="Heroes"]');
+        await expect(heroes).toContainText("1 model");
+        await heroes.getByTestId("folder-delete").click();
+        await heroes.getByTestId("folder-delete-confirm").click();
+        await expect(page.getByTestId("folder-tile").filter({ hasText: "Robots" })).toContainText("1 model");
+    });
+
+    test("removes several models at once, and one from its card", async ({ page }) => {
+        await page.goto("/panel.html");
+        await page.getByTestId("tab-library").click();
+        await page.getByTestId("import-files").click();
+        await page.waitForFunction(() => (window.__ps3dImported?.length ?? 0) >= 6, null, { timeout: 120_000 });
+        const cards = page.getByTestId("library-card");
+        await expect(cards).toHaveCount(8);
+
+        await cards.filter({ hasText: "cube-stl" }).click({ modifiers: ["Control"] });
+        await cards.filter({ hasText: "cube-ply" }).click({ modifiers: ["Control"] });
+        await expect(page.getByTestId("selection-bar")).toContainText("2 selected");
+        await page.getByTestId("remove-selected").click();
+        await page.getByTestId("remove-selected-confirm").click();
+        await expect(cards).toHaveCount(6);
+        await expect(cards.filter({ hasText: "cube-stl" })).toHaveCount(0);
+
+        const fbx = page.locator("div.group").filter({ has: page.getByText("cube-fbx", { exact: true }) });
+        await fbx.hover();
+        await fbx.getByTestId("card-remove").click();
+        await fbx.getByTestId("card-remove-confirm").click();
+        await expect(cards).toHaveCount(5);
+    });
+
+    test("imports files dropped from the file manager into the open folder", async ({ page }) => {
+        await page.goto("/panel.html");
+        await page.getByTestId("tab-library").click();
+        await page.getByTestId("new-folder").click();
+        await page.getByTestId("new-folder-name").fill("Props");
+        await page.keyboard.press("Enter");
+        await page.getByTestId("folder-tile").filter({ hasText: "Props" }).getByRole("button", { name: /0 models/ }).click();
+
+        const library = page.getByTestId("library");
+        const dt = await page.evaluateHandle(async () => {
+            const dt = new DataTransfer();
+            for (const [path, name] of [
+                ["samples/import/cube.obj", "cube.obj"],
+                ["samples/import/cube.mtl", "cube.mtl"],
+                ["samples/import/textures/checker.png", "checker.png"],
+                ["samples/import/cube.stl", "cube.stl"],
+                ["samples/totem.glb", "totem.glb"],
+            ]) {
+                const bytes = await (await fetch(`./${path}`)).arrayBuffer();
+                dt.items.add(new File([bytes], name));
+            }
+            return dt;
+        });
+        await library.dispatchEvent("dragenter", { dataTransfer: dt });
+        await expect(page.getByTestId("drop-overlay")).toContainText("Library › Props");
+        await library.dispatchEvent("dragover", { dataTransfer: dt });
+        await library.dispatchEvent("drop", { dataTransfer: dt });
+        await page.waitForFunction(() => (window.__ps3dImported?.length ?? 0) >= 3, null, { timeout: 60_000 });
+        const imported = await page.evaluate(() => window.__ps3dImported!);
+        expect(imported.map((i) => [i.name, i.sourceFormat, i.folder]).sort()).toEqual([
+            ["cube", "obj", "Props"],
+            ["cube", "stl", "Props"],
+            ["totem", "glb", "Props"],
+        ]);
+        expect(imported.find((i) => i.sourceFormat === "obj")!.notes.join(" ")).not.toMatch(/Missing/);
+        await expect(page.getByTestId("library-card")).toHaveCount(3);
+        await expect(page.getByText(/Added 3 models to the library/)).toBeVisible();
+    });
+});

@@ -13,14 +13,14 @@ export default defineConfig({
     retries: process.env.CI ? 1 : 0,
     reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
     use: {
-        baseURL: "http://localhost:5173",
+        baseURL: "http://localhost:5317",
         trace: "retain-on-failure",
         ...devices["Desktop Chrome"],
         launchOptions: { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] },
     },
     webServer: {
         command: "npm run dev:web",
-        url: "http://localhost:5173/panel.html",
+        url: "http://localhost:5317/panel.html",
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
     },

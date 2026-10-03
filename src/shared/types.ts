@@ -74,6 +74,8 @@ export type LibraryItem = {
     /** Library-relative path of the image that generated the model (if made here). */
     sourceFile?: string;
     format: "glb" | "gltf";
+    /** Library folder ("Characters/Robots"); "" or absent = top level. See shared/libraryFolders.ts. */
+    folder?: string;
     sizeBytes: number;
     createdAt: number;
     importedAt: number;

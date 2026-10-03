@@ -60,6 +60,8 @@ The [install guide](INSTALL.md) has the simple version of this table.
 ## Importing your own files
 | Symptom | Fix |
 |---|---|
+| Dropping files on the Library does nothing (or Photoshop opens the file) | Dropping files onto plugin panels needs Photoshop 2026 (UXP 9.1) or newer. Use **Import files…** or the Import folder instead. |
+| A dropped model has no textures | Drop the textures (or the whole folder) together with the model. Only files you drop can be read. |
 | "Missing texture: wood.jpg" after an import | Put the texture next to the model (or in a subfolder) and import again. The model was still added, without that texture. |
 | "No geometry found in this file" | The file holds no meshes (for example only animation or a camera), or uses a feature the three.js loader does not support. Re-export it from your 3D app as GLB, FBX or OBJ. |
 | A file in the Import folder is not picked up | The Library tab must be open. Each file is imported once; to import it again, change or rename it. Check the log (Settings › Diagnostics). |

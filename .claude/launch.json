@@ -5,7 +5,7 @@
       "name": "web-ui",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:web"],
-      "port": 5173
+      "port": 5317
     }
   ]
 }

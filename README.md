@@ -23,10 +23,12 @@
 
 ![The 3D pose and light editor](docs/images/ui-editor.jpg)
 
-> **New in 0.1.3:**
-> - **Bring your own 3D models.** Import GLB, FBX, OBJ, USDZ, STL and more, with their textures, or drop files into the library's *Import* folder.
+> **New in 0.1.4:** library **folders**, **drag and drop** (drop 3D files onto the Library, drag models into folders), and removing several models at once.
+>
+> **0.1.3:**
+> - **Bring your own 3D models.** Import GLB, FBX, OBJ, USDZ, STL and more, with their textures.
 > - **Up to date with every service:** Meshy Smart Topology, Tripo P2 and its v3.5 texture model, Hitem3D de-shading, and ComfyUI 0.38.
-> - **Fixes:** panel icons now show in collapsed docks, and **Show folder** works.
+> - **Fixes:** dock icons and **Show folder**.
 >
 > [All changes](CHANGELOG.md)
 
@@ -103,10 +105,11 @@ Keys are stored only on your computer. They are sent only to the service they be
 - **Send to 3D:** the active layer, or just the part inside your selection. Transparency is kept, so cut-out objects give the cleanest models. Jobs keep running if you close the panel, and they continue after a Photoshop restart.
 - **Browse your collections:** see the models you already made on Meshy, Tripo, Hitem3D or ComfyUI and import them with one click.
 - **Local library:** every model is downloaded once and stored on your computer, so it opens instantly and keeps working after the service's links expire. Previews are made automatically.
-- **Your own 3D files:** import GLB, glTF, FBX, OBJ, DAE, USDZ, 3DS, STL, PLY, 3MF and more, one file or a whole folder at a time.
+- **Your own 3D files:** drag GLB, glTF, FBX, OBJ, DAE, USDZ, 3DS, STL, PLY, 3MF and more onto the Library, or import them one file or a whole folder at a time.
   - Textures come along and are packed into the library.
   - Or copy files into the library's *Import* folder, and they are added by themselves.
   - **Show folder** opens the library in File Explorer / Finder.
+- **Folders:** organise the library into folders and subfolders. Drag models onto a folder to move them, select several to move or remove them at once, and search across every folder.
 - **3D pose & light editor:**
   - Light presets (Studio, Golden Hour, Noon, Dramatic, Rim, Soft, Moonlight), a sun you can drag, and color temperature.
   - Environments, cast and contact shadows, camera views and field of view.
@@ -215,7 +218,7 @@ flowchart LR
 
 ```bash
 npm install
-npm run dev:web        # the UI in a browser with a pretend Photoshop: http://localhost:5173/panel.html
+npm run dev:web        # the UI in a browser with a pretend Photoshop: http://localhost:5317/panel.html
 npm test               # unit tests
 npm run test:e2e       # browser tests of the panel and the 3D editor
 npm run dev:install    # build, package and install into your Photoshop

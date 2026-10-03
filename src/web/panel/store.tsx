@@ -17,6 +17,8 @@ type PanelState = {
     providers: ProviderStatus[];
     jobs: Job[];
     library: LibraryItem[];
+    /** Library folders ("A", "A/B"); see shared/libraryFolders.ts. */
+    folders: string[];
     ps: PsContext | null;
     update: UpdateInfo | null;
     toasts: Toast[];
@@ -37,6 +39,7 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     const [providers, setProviders] = useState<ProviderStatus[]>([]);
     const [jobs, setJobs] = useState<Job[]>([]);
     const [library, setLibrary] = useState<LibraryItem[]>([]);
+    const [folders, setFolders] = useState<string[]>([]);
     const [ps, setPs] = useState<PsContext | null>(null);
     const [update, setUpdate] = useState<UpdateInfo | null>(null);
     const [toasts, setToasts] = useState<Toast[]>([]);
@@ -71,6 +74,7 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
         const offs = [
             b.on("jobs.changed", setJobs),
             b.on("library.changed", setLibrary),
+            b.on("library.foldersChanged", setFolders),
             b.on("ps.context", setPs),
             b.on("settings.changed", (s) => {
                 setSettings(s);
@@ -81,7 +85,7 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
             b.on("toast", ({ kind, message }) => toast(kind, message)),
         ];
         void (async () => {
-            const [i, s, j, l, c] = await Promise.all([b.call("app.info"), b.call("settings.get"), b.call("jobs.list"), b.call("library.list"), b.call("ps.context")]);
+            const [i, s, j, l, c, f] = await Promise.all([b.call("app.info"), b.call("settings.get"), b.call("jobs.list"), b.call("library.list"), b.call("ps.context"), b.call("library.folders")]);
             document.documentElement.dataset.theme = i.theme;
             const base = await resolveLibraryBase(i.libraryBaseUrl);
             if (i.libraryBaseUrl && !base) void b.call("log.write", { level: "warn", message: "Library folder not readable from the WebView; streaming models through the bridge", data: i.libraryBaseUrl });
@@ -89,6 +93,7 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
             setSettings(s);
             setJobs(j);
             setLibrary(l);
+            setFolders(f);
             setPs(c);
             await refreshProviders();
         })().catch((err) => toast("error", `Could not load the panel: ${(err as Error).message}`));
@@ -96,8 +101,8 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     }, [refreshProviders, toast]);
 
     const value = useMemo<PanelState>(
-        () => ({ info, settings, providers, jobs, library, ps, update, toasts, toast, dismissToast, refreshProviders, setSettings, setUpdate, run }),
-        [info, settings, providers, jobs, library, ps, update, toasts, toast, dismissToast, refreshProviders, run],
+        () => ({ info, settings, providers, jobs, library, folders, ps, update, toasts, toast, dismissToast, refreshProviders, setSettings, setUpdate, run }),
+        [info, settings, providers, jobs, library, folders, ps, update, toasts, toast, dismissToast, refreshProviders, run],
     );
     return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

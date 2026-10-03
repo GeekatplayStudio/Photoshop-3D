@@ -90,8 +90,20 @@ export type HostApi = {
     "library.list": [void, LibraryItem[]];
     "library.update": [{ id: string; name?: string; favorite?: boolean }, LibraryItem];
     "library.remove": [{ id: string }, void];
+    /** Deletes several models (and their files). */
+    "library.removeMany": [{ ids: string[] }, void];
+    /** Moves models into a library folder ("" = top level). */
+    "library.move": [{ ids: string[]; folder: string }, void];
+    /** Every library folder ("A", "A/B", …). Folders are virtual; see shared/libraryFolders.ts. */
+    "library.folders": [void, string[]];
+    "library.createFolder": [{ parent: string; name: string }, string[]];
+    "library.renameFolder": [{ path: string; name: string }, string[]];
+    /** Deletes a folder; its models and subfolders move to its parent. */
+    "library.deleteFolder": [{ path: string }, string[]];
+    /** Adds a model the panel read itself (drag and drop), already GLB or converted to GLB. */
+    "library.addModel": [{ name: string; glbBase64: string; sourceFormat: string; folder?: string; from?: string; notes?: string[] }, LibraryItem];
     /** Lets the user pick model files (or a folder of them); GLB is stored now, the rest comes back for conversion. null = cancelled. */
-    "library.pickImport": [{ folder?: boolean }, ImportBatch | null];
+    "library.pickImport": [{ pickFolder?: boolean; into?: string }, ImportBatch | null];
     /** Imports new files from the library's Import folder (files copied there in the file manager). */
     "library.scanInbox": [void, ImportBatch];
     /** Reads a file that belongs to an import (fallback when the WebView cannot read it itself). */
@@ -138,6 +150,7 @@ export type ResultOf<M extends HostMethod> = HostApi[M][1];
 export type HostEvents = {
     "jobs.changed": Job[];
     "library.changed": LibraryItem[];
+    "library.foldersChanged": string[];
     "ps.context": PsContext;
     "settings.changed": PublicSettings;
     "update.available": UpdateInfo;

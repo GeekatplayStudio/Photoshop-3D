@@ -88,11 +88,14 @@ describe("model import", () => {
         expect(batch.toConvert.map((s) => [s.name, s.resources.map((r) => r.name)])).toEqual([["ext", ["a.bin"]]]);
     });
 
-    it("imports every model in a folder", async () => {
-        const { importer } = setup({ "D:\\kit\\a.glb": fakeGlb(), "D:\\kit\\sub\\b.obj": "obj", "D:\\kit\\sub\\deeper\\c.stl": "stl", "D:\\kit\\readme.md": "x" });
-        const batch = await importer.importFolder("D:\\kit");
-        expect(batch.imported.map((i) => i.name)).toEqual(["a"]);
+    it("imports every model in a folder as a library folder with the same subfolders", async () => {
+        const { importer, library } = setup({ "D:\\kit\\a.glb": fakeGlb(), "D:\\kit\\sub\\b.obj": "obj", "D:\\kit\\sub\\deeper\\c.stl": "stl", "D:\\kit\\readme.md": "x" });
+        const batch = await importer.importFolder("D:\\kit", "Assets");
+        expect(batch.imported.map((i) => [i.name, i.folder])).toEqual([["a", "Assets/kit"]]);
         expect(batch.toConvert.map((s) => s.name).sort()).toEqual(["b", "c"]);
+        const c = batch.toConvert.find((s) => s.name === "c")!;
+        expect((await importer.addConverted(c.id, "c", fakeGlb(), "stl")).folder).toBe("Assets/kit/sub/deeper");
+        expect(library.folders()).toEqual(["Assets", "Assets/kit", "Assets/kit/sub", "Assets/kit/sub/deeper"]);
         expect((await importer.importFolder("D:\\kit\\sub\\deeper\\..\\..\\empty").catch((e: Error) => e)).toString()).toMatch(/No folder/);
     });
 
@@ -101,7 +104,7 @@ describe("model import", () => {
         const { importer, store, library } = setup(files);
         const first = await importer.scanInbox();
         expect(await store.readText("library/Import/README.txt")).toMatch(/added to the\s+Geekatplay 3D Layers library/);
-        expect(first.imported.map((i) => i.name)).toEqual(["boat"]);
+        expect(first.imported.map((i) => [i.name, i.folder])).toEqual([["boat", undefined]]);
         expect(first.toConvert.map((s) => s.name)).toEqual(["lamp"]);
 
         // While the panel converts lamp.obj, a second scan does not offer it again.
@@ -114,6 +117,16 @@ describe("model import", () => {
         // Nothing new: nothing imported. A changed file is imported again.
         expect(await importer.scanInbox()).toEqual({ imported: [], toConvert: [], failed: [] });
         files["C:\\data\\library\\Import\\props\\lamp.obj"] = "obj v2";
-        expect((await importer.scanInbox()).toConvert.map((s) => s.name)).toEqual(["lamp"]);
+        const again = await importer.scanInbox();
+        expect(again.toConvert.map((s) => s.name)).toEqual(["lamp"]);
+        // A subfolder of the Import folder becomes a library folder.
+        expect((await importer.addConverted(again.toConvert[0].id, "lamp", fakeGlb(), "obj")).folder).toBe("props");
+    });
+
+    it("puts picked files into the folder being viewed", async () => {
+        const { importer } = setup({ "D:\\m\\a.glb": fakeGlb(), "D:\\m\\b.fbx": "fbx" });
+        const batch = await importer.importFiles(["D:\\m\\a.glb", "D:\\m\\b.fbx"], "Props/Indoor");
+        expect(batch.imported[0].folder).toBe("Props/Indoor");
+        expect((await importer.addConverted(batch.toConvert[0].id, "b", fakeGlb(), "fbx")).folder).toBe("Props/Indoor");
     });
 });

@@ -10,11 +10,14 @@
  *   the file manager are imported when the Library tab is open. A ledger (import-ledger.json)
  *   remembers what was imported, so files are not imported twice and are never moved or
  *   deleted.
+ * - Folders: picked files go to the folder the user is looking at. An imported folder becomes a
+ *   library folder of the same name, with its subfolders, and so do subfolders of the Import folder.
  *
  * The host only reads files that belong to an import it started (`sessions`).
  */
 import { newId, utf8Decode } from "@shared/bytes";
-import { extOf, isModelFile, isResourceFile, isSelfContainedGltf, stripExt, type ImportBatch, type ImportSource } from "@shared/modelFormats";
+import { baseName, extOf, isModelFile, isResourceFile, isSelfContainedGltf, stripExt, type ImportBatch, type ImportSource } from "@shared/modelFormats";
+import { joinFolder, normalizeFolder, parentFolder } from "@shared/libraryFolders";
 import type { LibraryItem } from "@shared/types";
 import { readJson, writeJson, type FileStore } from "../platform/fileStore";
 import type { Logger } from "../platform/logger";
@@ -40,7 +43,7 @@ export type ImportFs = {
     sep: string;
 };
 
-type Session = { path: string; allowed: Set<string>; inboxKey?: string; inboxStamp?: string };
+type Session = { path: string; allowed: Set<string>; folder: string; inboxKey?: string; inboxStamp?: string };
 type LedgerEntry = { stamp: string; libraryId?: string; error?: string; at: number };
 type LedgerFile = { version: 1; files: Record<string, LedgerEntry> };
 
@@ -82,19 +85,28 @@ export class ModelImporter {
         return i > 0 ? path.slice(0, i) : path;
     }
 
-    /** Imports picked files. */
-    async importFiles(paths: string[]): Promise<ImportBatch> {
+    /** Imports picked files into a library folder ("" = top level). */
+    async importFiles(paths: string[], into = ""): Promise<ImportBatch> {
+        return this.importPlaced(paths.map((path) => ({ path, folder: normalizeFolder(into) })));
+    }
+
+    private async importPlaced(files: { path: string; folder: string }[]): Promise<ImportBatch> {
         const batch: ImportBatch = { imported: [], toConvert: [], failed: [] };
-        for (const path of paths) await this.importOne(path, batch);
+        const paths = files.map((f) => f.path);
+        for (const { path, folder } of files) await this.importOne(path, batch, folder);
         this.deps.log.info(`Import: ${batch.imported.length} stored, ${batch.toConvert.length} to convert, ${batch.failed.length} failed`, paths);
         return batch;
     }
 
-    /** Imports every model file in a folder and its subfolders. */
-    async importFolder(folder: string): Promise<ImportBatch> {
+    /**
+     * Imports every model file in a folder and its subfolders. The folder becomes a library
+     * folder of the same name inside `into`, with the same subfolders.
+     */
+    async importFolder(folder: string, into = ""): Promise<ImportBatch> {
         const models = (await this.walk(folder, FOLDER_DEPTH)).filter((f) => isModelFile(f.path)).slice(0, MAX_MODELS_PER_FOLDER);
         if (!models.length) return { imported: [], toConvert: [], failed: [{ name: folder, error: "No 3D model files were found in this folder." }] };
-        return this.importFiles(models.map((m) => m.path));
+        const target = joinFolder(normalizeFolder(into), baseName(folder.replace(/[\\/]+$/, "")));
+        return this.importPlaced(models.map((m) => ({ path: m.path, folder: joinFolder(target, parentFolder(m.relative)) })));
     }
 
     /** Imports new or changed model files from the Import folder. */
@@ -116,7 +128,8 @@ export class ModelImporter {
             const stamp = `${file.size ?? "?"}:${file.modified ?? "?"}`;
             if (pending.has(key) || ledger.files[key]?.stamp === stamp) continue;
             const before = batch.toConvert.length;
-            const item = await this.importOne(file.path, batch);
+            // A subfolder of the Import folder becomes a library folder.
+            const item = await this.importOne(file.path, batch, normalizeFolder(parentFolder(file.relative)));
             if (batch.toConvert.length > before) {
                 const source = batch.toConvert[batch.toConvert.length - 1];
                 Object.assign(this.sessions.get(source.id)!, { inboxKey: key, inboxStamp: stamp });
@@ -130,13 +143,13 @@ export class ModelImporter {
         return batch;
     }
 
-    private async importOne(path: string, batch: ImportBatch): Promise<LibraryItem | undefined> {
+    private async importOne(path: string, batch: ImportBatch, folder: string): Promise<LibraryItem | undefined> {
         const name = stripExt(path);
         const ext = extOf(path);
         try {
             if (!isModelFile(path)) throw new Error("not a supported 3D file");
             if (ext === "glb") {
-                const item = await this.deps.library.add({ name, origin: "local", model: await this.deps.fs.readBytes(path), meta: { importedFrom: path, sourceFormat: ext } });
+                const item = await this.deps.library.add({ name, origin: "local", model: await this.deps.fs.readBytes(path), folder, meta: { importedFrom: path, sourceFormat: ext } });
                 batch.imported.push(item);
                 return item;
             }
@@ -149,14 +162,14 @@ export class ModelImporter {
                     throw new Error("this .gltf file is not valid JSON");
                 }
                 if (isSelfContainedGltf(json)) {
-                    const item = await this.deps.library.add({ name, origin: "local", model: bytes, meta: { importedFrom: path, sourceFormat: ext } });
+                    const item = await this.deps.library.add({ name, origin: "local", model: bytes, folder, meta: { importedFrom: path, sourceFormat: ext } });
                     batch.imported.push(item);
                     return item;
                 }
             }
             const resources = await this.resourcesNear(path);
             const id = newId("imp");
-            this.sessions.set(id, { path, allowed: new Set([path, ...resources.map((r) => r.path)]) });
+            this.sessions.set(id, { path, folder, allowed: new Set([path, ...resources.map((r) => r.path)]) });
             const source: ImportSource = { id, name, ext, url: this.deps.fs.fileUrl(path), path, resources };
             batch.toConvert.push(source);
         } catch (err) {
@@ -219,6 +232,7 @@ export class ModelImporter {
             name: name.trim() || stripExt(session.path),
             origin: "local",
             model: glb,
+            folder: session.folder,
             meta: { importedFrom: session.path, sourceFormat, convertedToGlb: true, ...(notes?.length ? { notes } : {}) },
         });
         this.sessions.delete(id);

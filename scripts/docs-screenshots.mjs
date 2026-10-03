@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const out = join(dirname(fileURLToPath(import.meta.url)), "..", "docs", "images");
-const base = process.env.DOCS_BASE_URL ?? "http://localhost:5173";
+const base = process.env.DOCS_BASE_URL ?? "http://localhost:5317";
 const docsModel = process.env.DOCS_MODEL;
 
 const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
@@ -86,6 +86,16 @@ await page.getByTestId("import-files").click();
 await page.waitForFunction(() => (window.__ps3dImported?.length ?? 0) >= 6, null, { timeout: 120_000 });
 await page.getByTestId("import-status").waitFor({ state: "detached", timeout: 60_000 });
 await page.waitForFunction(() => [...document.querySelectorAll('[data-testid="library-card"]')].slice(0, 6).every((c) => c.querySelector("img")), null, { timeout: 60_000 });
+// Two folders, one with models dragged into it.
+for (const name of ["Characters", "Props"]) {
+    await page.getByTestId("new-folder").click();
+    await page.getByTestId("new-folder-name").fill(name);
+    await page.keyboard.press("Enter");
+}
+for (const name of ["cube-ply", "cube-stl"]) {
+    await page.getByTestId("library-card").filter({ hasText: name }).dragTo(page.locator('[data-testid="folder-tile"][data-folder="Props"]'));
+    await page.waitForTimeout(800);
+}
 await page.waitForTimeout(1500);
 await shot("library");
 

@@ -12,7 +12,7 @@ npm install
 
 | Command | What it does |
 |---|---|
-| `npm run dev:web` | Serves the UI at http://localhost:5173/panel.html and `/editor.html?model=lib_totem`, against the **mock host** (`src/web/bridge/mockHost.ts`) with the sample model in `tests/fixtures/public`. Hot reload. |
+| `npm run dev:web` | Serves the UI on port **5317** (fixed, so other projects' dev servers on Vite's default 5173 are never mistaken for this one) at http://localhost:5317/panel.html and `/editor.html?model=lib_totem`, against the **mock host** (`src/web/bridge/mockHost.ts`) with the sample model in `tests/fixtures/public`. Hot reload. |
 | `npm run build` | Builds `dist/plugin/`: Vite builds the UI into `web/`, esbuild builds `host.js`, then the manifest (version from `package.json`), icons and `build-info.json` are added. |
 | `npm run package` | Zips `dist/plugin` into `dist/release/geekatplay-3d-layers-<version>.ccx` (plus `geekatplay-3d-layers.ccx`) and writes `SHA256SUMS.txt`. Validates the manifest the way Adobe's packager does. |
 | `npm run dist` | `build` + `package` |

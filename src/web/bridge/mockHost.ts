@@ -10,6 +10,7 @@ import { settingsForNewModel } from "@shared/threeD";
 import { PROVIDER_IDS, PROVIDER_LABELS, type AppInfo, type Job, type LibraryItem, type ProviderId, type PsContext, type RemoteItem } from "@shared/types";
 import { base64ToBytes } from "@shared/bytes";
 import type { ImportSource } from "@shared/modelFormats";
+import { allFolders, cleanFolderName, joinFolder, normalizeFolder, parentFolder, relocateFolder, withAncestors } from "@shared/libraryFolders";
 import type { Transport } from "./client";
 
 type Handler = (params: unknown) => unknown;
@@ -19,7 +20,7 @@ declare global {
         /** Last editor result, for tests. */
         __ps3dEditorResult?: EditorResult | null;
         /** Models converted by the import, for tests. */
-        __ps3dImported?: { name: string; sourceFormat: string; bytes: number; notes: string[]; images?: number; meshes?: number }[];
+        __ps3dImported?: { name: string; sourceFormat: string; bytes: number; notes: string[]; images?: number; meshes?: number; folder?: string }[];
     }
 }
 
@@ -39,6 +40,13 @@ export function createMockTransport(): Transport {
         { id: "lib_totem", name: "Totem (sample)", origin: "local", modelFile: "samples/totem.glb", format: "glb", sizeBytes: 6880, createdAt: now - 86_400_000, importedAt: now - 86_400_000 },
         { id: "lib_totem2", name: "Meshy totem", origin: "meshy", remoteId: "018f-mock", modelFile: "samples/totem.glb", thumbFile: "samples/totem-thumb.png", format: "glb", sizeBytes: 6880, createdAt: now - 3_600_000, importedAt: now - 3_600_000, favorite: true },
     ];
+    let storedFolders = new Set<string>();
+    let importTarget = "";
+    const folders = () => allFolders(storedFolders, library);
+    const libraryChanged = () => {
+        emit("library.changed", [...library]);
+        emit("library.foldersChanged", folders());
+    };
     let jobs: Job[] = [];
     const ctx: PsContext = { hasDocument: true, docId: 1, docTitle: "Mock.psd", docWidth: 1920, docHeight: 1080, layerId: 2, layerName: "Chair", layerKind: "pixel", hasSelection: false, is3DLayer: false };
 
@@ -185,10 +193,56 @@ export function createMockTransport(): Transport {
         },
         "library.remove": ({ id }) => {
             library = library.filter((i) => i.id !== id);
-            emit("library.changed", library);
+            libraryChanged();
+        },
+        "library.removeMany": ({ ids }) => {
+            for (const i of library) if (ids.includes(i.id) && i.folder) withAncestors(i.folder).forEach((a) => storedFolders.add(a));
+            library = library.filter((i) => !ids.includes(i.id));
+            libraryChanged();
+        },
+        "library.move": ({ ids, folder }) => {
+            const target = normalizeFolder(folder);
+            library = library.map((i) => (ids.includes(i.id) ? { ...i, folder: target || undefined } : i));
+            withAncestors(target).forEach((a) => storedFolders.add(a));
+            libraryChanged();
+        },
+        "library.folders": () => folders(),
+        "library.createFolder": ({ parent, name }) => {
+            const clean = cleanFolderName(name);
+            if (!clean) throw new Error("Type a folder name.");
+            const path = joinFolder(parent, clean);
+            if (folders().some((f) => f.toLowerCase() === path.toLowerCase())) throw new Error(`There is already a folder named "${clean}" here.`);
+            withAncestors(path).forEach((a) => storedFolders.add(a));
+            libraryChanged();
+            return folders();
+        },
+        "library.renameFolder": ({ path, name }) => {
+            const to = joinFolder(parentFolder(path), cleanFolderName(name));
+            if (!cleanFolderName(name)) throw new Error("Type a folder name.");
+            if (to !== path && folders().some((f) => f.toLowerCase() === to.toLowerCase())) throw new Error(`There is already a folder named "${cleanFolderName(name)}" here.`);
+            library = library.map((i) => ({ ...i }));
+            storedFolders = relocateFolder(storedFolders, library, path, to);
+            libraryChanged();
+            return folders();
+        },
+        "library.deleteFolder": ({ path }) => {
+            library = library.map((i) => ({ ...i }));
+            storedFolders = relocateFolder(storedFolders, library, path, parentFolder(path));
+            libraryChanged();
+            return folders();
+        },
+        "library.addModel": ({ name, glbBase64, sourceFormat, folder, notes }) => {
+            const glb = base64ToBytes(glbBase64);
+            const url = URL.createObjectURL(new Blob([glb as BlobPart], { type: "model/gltf-binary" }));
+            const item: LibraryItem = { id: `lib_drop_${Date.now().toString(36)}_${library.length}`, name, origin: "local", modelFile: url, format: "glb", folder: normalizeFolder(folder) || undefined, sizeBytes: glb.byteLength, createdAt: Date.now(), importedAt: Date.now(), meta: { sourceFormat, notes } };
+            (window.__ps3dImported ??= []).push({ name, sourceFormat, bytes: glb.byteLength, notes: notes ?? [], folder: item.folder ?? "" });
+            library = [item, ...library];
+            libraryChanged();
+            return item;
         },
         // Import: the files in tests/fixtures/public/samples/import, as the host would describe them.
-        "library.pickImport": () => {
+        "library.pickImport": ({ into }) => {
+            importTarget = normalizeFolder(into);
             const dir = "./samples/import/";
             const resources = ["cube.mtl", "cube.bin", "textures/checker.png"].map((name) => ({ name, url: `${dir}${name}`, path: `${dir}${name}` }));
             const toConvert: ImportSource[] = ["fbx", "obj", "gltf", "stl", "ply", "usdz"].map((ext) => ({ id: `imp_${ext}`, name: `cube-${ext}`, ext, url: `${dir}cube.${ext}`, path: `${dir}cube.${ext}`, resources }));
@@ -204,12 +258,12 @@ export function createMockTransport(): Transport {
         "library.addConverted": ({ id, name, glbBase64, sourceFormat, notes }) => {
             const glb = base64ToBytes(glbBase64);
             const url = URL.createObjectURL(new Blob([glb as BlobPart], { type: "model/gltf-binary" }));
-            const item: LibraryItem = { id: `lib_${id}`, name, origin: "local", modelFile: url, format: "glb", sizeBytes: glb.byteLength, createdAt: Date.now(), importedAt: Date.now(), meta: { sourceFormat, convertedToGlb: true, notes } };
+            const item: LibraryItem = { id: `lib_${id}`, name, origin: "local", modelFile: url, format: "glb", folder: importTarget || undefined, sizeBytes: glb.byteLength, createdAt: Date.now(), importedAt: Date.now(), meta: { sourceFormat, convertedToGlb: true, notes } };
             const jsonLength = new DataView(glb.buffer, glb.byteOffset).getUint32(12, true);
             const json = JSON.parse(new TextDecoder().decode(glb.subarray(20, 20 + jsonLength))) as { images?: unknown[]; meshes?: unknown[] };
             (window.__ps3dImported ??= []).push({ name, sourceFormat, bytes: glb.byteLength, notes: notes ?? [], images: json.images?.length ?? 0, meshes: json.meshes?.length ?? 0 });
             library = [item, ...library];
-            emit("library.changed", library);
+            libraryChanged();
             return item;
         },
         "library.importFailed": ({ id, error }) => {

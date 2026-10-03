@@ -355,15 +355,23 @@ export async function startApp() {
         "library.list": () => library.list(),
         "library.update": ({ id, name, favorite }) => library.update(id, { name, favorite }),
         "library.remove": ({ id }) => library.remove(id),
-        "library.pickImport": async ({ folder }) => {
-            if (folder) {
+        "library.pickImport": async ({ pickFolder, into }) => {
+            if (pickFolder) {
                 const dir = await lfs.getFolder();
-                return dir ? importer.importFolder(dir.nativePath) : null;
+                return dir ? importer.importFolder(dir.nativePath, into) : null;
             }
             const picked = await lfs.getFileForOpening({ allowMultiple: true, types: [...MODEL_EXTENSIONS] });
             const files = Array.isArray(picked) ? picked : picked ? [picked] : [];
-            return files.length ? importer.importFiles(files.map((f) => f.nativePath)) : null;
+            return files.length ? importer.importFiles(files.map((f) => f.nativePath), into) : null;
         },
+        "library.addModel": ({ name, glbBase64, sourceFormat, folder, from, notes }) =>
+            library.add({ name, origin: "local", model: base64ToBytes(glbBase64), folder, meta: { importedFrom: from ?? "drag and drop", sourceFormat, ...(sourceFormat !== "glb" && sourceFormat !== "gltf" ? { convertedToGlb: true } : {}), ...(notes?.length ? { notes } : {}) } }),
+        "library.removeMany": ({ ids }) => library.removeMany(ids),
+        "library.move": ({ ids, folder }) => library.move(ids, folder),
+        "library.folders": () => library.folders(),
+        "library.createFolder": ({ parent, name }) => library.createFolder(parent, name),
+        "library.renameFolder": ({ path, name }) => library.renameFolder(path, name),
+        "library.deleteFolder": ({ path }) => library.deleteFolder(path),
         "library.scanInbox": () => importer.scanInbox(),
         "library.readImportFile": async ({ id, path }) => ({ base64: bytesToBase64(await importer.readFile(id, path)) }),
         "library.addConverted": ({ id, name, glbBase64, sourceFormat, notes }) => importer.addConverted(id, name, base64ToBytes(glbBase64), sourceFormat, notes),
@@ -479,6 +487,7 @@ export async function startApp() {
 
     jobs.onChange((list) => emit("jobs.changed", list));
     library.onChange((items) => emit("library.changed", items));
+    library.onFoldersChange((folders) => emit("library.foldersChanged", folders));
     settings.onChange((s) => emit("settings.changed", s));
 
     try {

@@ -84,18 +84,51 @@ The **Library** tab shows every model on this computer: generated, imported from
 
 <img src="images/ui-library.png" width="280" alt="Library tab with model previews">
 
-- Click a card to see an interactive 3D preview and its details: service, size, task id.
+- Click a card to see an interactive 3D preview and its details: service, size, task id, folder.
 - Double-click a card, or use **Pose, light & place in document**, to place it in the active document.
-- **Favorite**, **Rename**, **Re-render preview**, **Delete**. Deleting a model doesn't change layers you already placed, but they can't be re-posed until the model is imported again.
+- **Favorite**, **Rename**, **Re-render preview**, **Remove**. Removing a model deletes it from this computer. Layers you already placed keep their pixels, but can't be re-posed until the model is imported again.
+
+### Folders
+
+Organise models into folders, and folders inside folders.
+
+**Create and open folders:**
+- **New folder** makes a folder inside the one you are looking at.
+- Click a folder to open it.
+- The path above the grid (*Library › Characters › Robots*) takes you back up.
+
+**Move models:**
+- Drag a model onto a folder, or onto a part of the path to move it up.
+- Or select models and use **Move to…**.
+- Or pick a folder in the model's details.
+
+**Rename or delete a folder:** use the pencil or bin on the folder. Deleting a folder never deletes models: its models and subfolders move up one level.
+
+**Search:** the search box looks in every folder, and shows which folder each result is in.
+
+Folders are part of the library's index, while the model files stay where they are. Moving models is instant and never affects layers you already placed.
+
+### Select and remove several models
+
+- **Ctrl+click** (Cmd+click on a Mac) adds or removes a model from the selection. **Shift+click** selects a range, and **Ctrl/Cmd+A** selects everything shown.
+- With several selected, a bar offers **Move to…** and **Remove**. The **Delete** key also removes the selection after asking, and **Esc** clears it.
+- Hover over a model and click the bin in its corner to remove just that one (click **Remove?** to confirm).
 - **Show folder** opens the library folder in File Explorer / Finder; every model is a normal `.glb` you can use elsewhere. The first time, Photoshop asks: *"The plugin Geekatplay 3D Layers wants to open …\library"*. Click **Allow**.
 
 ### Import your own 3D files
 
-There are three ways to add your own models, and each one adds them to the library automatically:
+There are four ways to add your own models, and each one adds them to the library automatically:
 
+- **Drag and drop:** drag 3D files, or whole folders, from File Explorer / Finder onto the Library tab. Drop a model together with its textures (or the folder that holds them).
+  - This needs **Photoshop 2026** or newer; older versions don't pass dropped files to plugin panels.
 - **Import files…** opens a file browser. Pick one or more files.
 - **Import folder…** adds every 3D file in a folder and its subfolders.
 - **The Import folder:** copy files into the library's *Import* folder in File Explorer / Finder (click **Import folder** in the line under the buttons to open it). While the Library tab is open, new files there are added within a few seconds. Files in it are never moved or deleted; each one is imported once, and again if you change it.
+
+**Where imports go:**
+- Dropped and picked files go into the library folder you are looking at.
+- A dropped or imported folder becomes a library folder of the same name, with its subfolders.
+- In the Import folder, a subfolder such as `Import/Characters/robot.fbx` becomes the library folder *Characters*.
 
 | Format | Notes |
 |---|---|

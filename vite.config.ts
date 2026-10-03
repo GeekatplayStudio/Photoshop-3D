@@ -80,7 +80,7 @@ export default defineConfig(({ command }) => ({
         },
     },
     server: {
-        port: 5173,
+        port: 5317,
         strictPort: true,
     },
 }));
