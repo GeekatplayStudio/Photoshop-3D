@@ -4,6 +4,8 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-03
+
 ### Fixed
 - Marketplace copy: **Plugins › Geekatplay 3D Layers › Check for Updates…** says that Creative Cloud keeps the plugin up to date, instead of asking GitHub.
 
