@@ -1,6 +1,6 @@
-// Generates plugin/icons/*.png: an isometric cube with a light dot (the "sun" from
-// the 3D editor). Run `node scripts/make-icons.mjs` after changing the design; the
-// PNGs are committed so builds never depend on this script.
+// Generates the panel icons plugin/icons/panel-*.png: an isometric cube with a light dot (the
+// "sun" from the 3D editor), in the light and dark theme colors. Run `node scripts/make-icons.mjs`
+// after changing the design; the PNGs are committed so builds never depend on this script.
 import { writeFileSync, mkdirSync } from "node:fs";
 import { deflateSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
@@ -111,7 +111,6 @@ icon("panel-dark@1x.png", 23, "dark");
 icon("panel-dark@2x.png", 46, "dark");
 icon("panel-light@1x.png", 23, "light");
 icon("panel-light@2x.png", 46, "light");
-icon("plugin@1x.png", 48, "plugin");
-icon("plugin@2x.png", 96, "plugin");
-icon("app-256.png", 256, "plugin");
+// plugin@1x.png, plugin@2x.png and app-256.png (the plugin's own icon) are rendered from
+// distribution/source/icon.svg by distribution/make-assets.mjs.
 console.log(`Icons written to ${out}`);

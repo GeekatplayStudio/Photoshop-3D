@@ -64,6 +64,7 @@ export function buildImageTo3dBody(settings: ProviderContext["settings"]["meshy"
             target_formats: ["glb"],
             alpha_thumbnail: true,
         };
+        if (settings.moderation) body.moderation = true;
         if (settings.targetPolycount > 0) body.target_polycount = Math.min(15_000, Math.max(100, settings.targetPolycount));
         return body;
     }
@@ -76,6 +77,8 @@ export function buildImageTo3dBody(settings: ProviderContext["settings"]["meshy"
         target_formats: ["glb"],
         alpha_thumbnail: true,
     };
+    // Meshy screens the input image for harmful content and rejects it with an explanation.
+    if (settings.moderation) body.moderation = true;
     if (settings.shouldRemesh) {
         body.topology = settings.topology;
         if (settings.targetPolycount > 0) body.target_polycount = Math.max(100, settings.targetPolycount);

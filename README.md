@@ -40,6 +40,8 @@
 
 Every model is saved in a library on your computer, so you can use it again in any document without paying to generate it twice.
 
+**No account yet?** The plugin comes with a sample model: click **Try the sample model** and pose and light it right away.
+
 **Already have 3D models?** You don't need a service to use the editor. Import your own files, such as a GLB from Blender, an FBX from a stock site or an OBJ with its textures, and pose and light them the same way.
 
 | Create | Your library | Browse your services | Settings |
@@ -140,7 +142,7 @@ All of the code is on this page. Every release is built from it automatically by
 - **Requests for your model list and downloads:** to the services you set up.
 - **An update check:** to GitHub, at most every 12 hours. You can turn this off in Settings.
 
-There is no tracking or analytics. Every request is written to a log you can read (**Settings › Diagnostics**). Your keys are never logged. [Exactly which calls are made to each service](docs/PROVIDERS.md).
+There is no tracking or analytics. Every request is written to a log you can read (**Settings › Diagnostics**). Your keys are never logged. [Exactly which calls are made to each service](docs/PROVIDERS.md) · [Privacy policy](PRIVACY.md).
 </details>
 
 <details>

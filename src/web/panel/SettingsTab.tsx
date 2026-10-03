@@ -185,6 +185,7 @@ export function SettingsTab() {
                 )}
                 <Toggle label="Texture the model" checked={m.shouldTexture} onChange={(v) => set({ meshy: { shouldTexture: v } })} />
                 <Toggle label="PBR maps (metallic, roughness, normal)" checked={m.enablePbr} onChange={(v) => set({ meshy: { enablePbr: v } })} />
+                <Toggle label="Content moderation" hint="Meshy checks the image for harmful content before generating." checked={m.moderation} onChange={(v) => set({ meshy: { moderation: v } })} />
                 {m.aiModel === "meshy-6" && <Toggle label="Remove lighting from the photo" checked={m.removeLighting} onChange={(v) => set({ meshy: { removeLighting: v } })} />}
                 {m.aiModel !== MESHY_SMART_TOPOLOGY_MODEL && m.aiModel !== "meshy-6-lite" && (
                     <Toggle label="Enhance the input image" checked={m.imageEnhancement} onChange={(v) => set({ meshy: { imageEnhancement: v } })} />
@@ -393,44 +394,55 @@ export function SettingsTab() {
                 </Button>
             </Section>
 
-            <Section title="Updates" right={update?.available ? <Badge tone="info">v{update.latestVersion}</Badge> : undefined}>
-                <div className="text-xs">
-                    Installed: <b>{info?.pluginVersion}</b>
-                    {update && !update.error && (update.available ? <> · Latest: <b>{update.latestVersion}</b></> : <span className="text-muted-foreground"> · up to date</span>)}
-                </div>
-                {update?.error && <div className="text-[10px] text-danger">{update.error}</div>}
-                {update?.available && update.releaseNotes && <pre className="text-[10px] text-muted-foreground whitespace-pre-wrap max-h-32 overflow-auto bg-input p-2 rounded select-text">{update.releaseNotes}</pre>}
-                <div className="flex gap-1 flex-wrap">
-                    <Button size="sm" busy={checking} icon={<RefreshCw size={11} />} onClick={async () => {
-                        setChecking(true);
-                        const u = await run(() => bridge().call("update.check", { force: true }));
-                        if (u) setUpdate(u);
-                        setChecking(false);
-                    }}>
-                        Check now
-                    </Button>
-                    {update?.available && (
-                        <Button size="sm" variant="primary" busy={installing} icon={<Download size={11} />} onClick={async () => {
-                            setInstalling(true);
-                            const r = await run(() => bridge().call("update.install"));
-                            if (r) toast(r.started ? "success" : "info", r.message);
-                            setInstalling(false);
+            {info?.channel === "marketplace" ? (
+                <Section title="Updates">
+                    <div className="text-xs">
+                        Installed: <b>{info.pluginVersion}</b>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-snug" data-testid="marketplace-updates">
+                        This copy was installed from the Creative Cloud Marketplace. The Creative Cloud app keeps it up to date.
+                    </p>
+                </Section>
+            ) : (
+                <Section title="Updates" right={update?.available ? <Badge tone="info">v{update.latestVersion}</Badge> : undefined}>
+                    <div className="text-xs">
+                        Installed: <b>{info?.pluginVersion}</b>
+                        {update && !update.error && (update.available ? <> · Latest: <b>{update.latestVersion}</b></> : <span className="text-muted-foreground"> · up to date</span>)}
+                    </div>
+                    {update?.error && <div className="text-[10px] text-danger">{update.error}</div>}
+                    {update?.available && update.releaseNotes && <pre className="text-[10px] text-muted-foreground whitespace-pre-wrap max-h-32 overflow-auto bg-input p-2 rounded select-text">{update.releaseNotes}</pre>}
+                    <div className="flex gap-1 flex-wrap">
+                        <Button size="sm" busy={checking} icon={<RefreshCw size={11} />} onClick={async () => {
+                            setChecking(true);
+                            const u = await run(() => bridge().call("update.check", { force: true }));
+                            if (u) setUpdate(u);
+                            setChecking(false);
                         }}>
-                            Install v{update.latestVersion}
+                            Check now
                         </Button>
-                    )}
-                    {update?.releaseUrl && (
-                        <Button size="sm" variant="ghost" icon={<ExternalLink size={11} />} onClick={() => void bridge().call("shell.openExternal", { url: update.releaseUrl! })}>
-                            Release notes
-                        </Button>
-                    )}
-                </div>
-                <Toggle label={`Check automatically (every ${settings.updates.checkIntervalHours} h)`} checked={settings.updates.autoCheck} onChange={(v) => set({ updates: { autoCheck: v } })} />
-                <Toggle label="Include pre-releases" checked={settings.updates.includePrerelease} onChange={(v) => set({ updates: { includePrerelease: v } })} />
-                <Field label="Release repository">
-                    <CommitInput value={settings.updates.repo} onCommit={(v) => set({ updates: { repo: v } })} />
-                </Field>
-            </Section>
+                        {update?.available && (
+                            <Button size="sm" variant="primary" busy={installing} icon={<Download size={11} />} onClick={async () => {
+                                setInstalling(true);
+                                const r = await run(() => bridge().call("update.install"));
+                                if (r) toast(r.started ? "success" : "info", r.message);
+                                setInstalling(false);
+                            }}>
+                                Install v{update.latestVersion}
+                            </Button>
+                        )}
+                        {update?.releaseUrl && (
+                            <Button size="sm" variant="ghost" icon={<ExternalLink size={11} />} onClick={() => void bridge().call("shell.openExternal", { url: update.releaseUrl! })}>
+                                Release notes
+                            </Button>
+                        )}
+                    </div>
+                    <Toggle label={`Check automatically (every ${settings.updates.checkIntervalHours} h)`} checked={settings.updates.autoCheck} onChange={(v) => set({ updates: { autoCheck: v } })} />
+                    <Toggle label="Include pre-releases" checked={settings.updates.includePrerelease} onChange={(v) => set({ updates: { includePrerelease: v } })} />
+                    <Field label="Release repository">
+                        <CommitInput value={settings.updates.repo} onCommit={(v) => set({ updates: { repo: v } })} />
+                    </Field>
+                </Section>
+            )}
 
             <Section title="Diagnostics" defaultOpen={false}>
                 <table className="text-[10px] w-full select-text">

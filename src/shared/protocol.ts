@@ -92,6 +92,8 @@ export type HostApi = {
     "library.remove": [{ id: string }, void];
     /** Deletes several models (and their files). */
     "library.removeMany": [{ ids: string[] }, void];
+    /** Adds the sample model that ships with the plugin (try posing without a 3D service). */
+    "library.addSample": [void, LibraryItem];
     /** Moves models into a library folder ("" = top level). */
     "library.move": [{ ids: string[]; folder: string }, void];
     /** Every library folder ("A", "A/B", …). Folders are virtual; see shared/libraryFolders.ts. */

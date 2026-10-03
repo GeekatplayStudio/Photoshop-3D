@@ -536,6 +536,13 @@ export function LibraryTab() {
                             ? "Try another search or filter."
                             : "Drag models onto this folder's name above, or drop 3D files here."
                         : "Generate a model on the Create tab, import one from Browse, or drag 3D files here (GLB, FBX, OBJ and more)."}
+                    {!library.length && (
+                        <div className="mt-2">
+                            <Button size="sm" variant="primary" icon={<Box size={11} />} onClick={() => void run(() => bridge().call("library.addSample"), "Sample model added: double-click it to pose and place it")} data-testid="add-sample">
+                                Add a sample model
+                            </Button>
+                        </div>
+                    )}
                 </Empty>
             ) : (
                 <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))" }} data-testid="library-grid">

@@ -86,7 +86,7 @@ function JobCard({ job, onOpenLibrary }: { job: Job; onOpenLibrary: () => void }
 }
 
 /** First-run help: three steps from install to a re-posable 3D layer. */
-function GettingStarted({ onOpenSettings }: { onOpenSettings: () => void }) {
+function GettingStarted({ onOpenSettings, onOpenLibrary }: { onOpenSettings: () => void; onOpenLibrary: () => void }) {
     const { info, run, setSettings } = usePanel();
     const step = (n: number, body: ReactNode) => (
         <li className="flex gap-2">
@@ -104,9 +104,25 @@ function GettingStarted({ onOpenSettings }: { onOpenSettings: () => void }) {
                 {step(2, <>Select a layer — an object on a transparent background works best — and press <b>Generate 3D model</b>.</>)}
                 {step(3, <>When it's ready, click <b>Pose &amp; place</b>. Later, <b>double-click the new layer</b> to change its pose and light.</>)}
             </ol>
+            <p className="text-[10px] text-muted-foreground leading-snug">
+                No account yet? <b>Try the sample model</b> to pose and light one right away, or import your own 3D files in the Library.
+            </p>
             <div className="flex flex-wrap gap-1 pt-0.5">
                 <Button size="sm" variant="primary" icon={<KeyRound size={11} />} onClick={onOpenSettings}>
                     Set up a service
+                </Button>
+                <Button
+                    size="sm"
+                    icon={<Box size={11} />}
+                    onClick={() =>
+                        void run(async () => {
+                            await bridge().call("library.addSample");
+                            onOpenLibrary();
+                        }, "Sample model added to the library: double-click it to pose and place it")
+                    }
+                    data-testid="try-sample"
+                >
+                    Try the sample model
                 </Button>
                 {info && (
                     <Button size="sm" icon={<BookOpen size={11} />} onClick={() => void bridge().call("shell.openExternal", { url: `${info.repoUrl}/blob/main/docs/USER_GUIDE.md` })}>
@@ -176,7 +192,7 @@ export function CreateTab({ onOpenLibrary, onOpenSettings }: { onOpenLibrary: ()
 
     return (
         <div className="p-2 space-y-2">
-            {settings && !settings.ui.welcomeDismissed && <GettingStarted onOpenSettings={onOpenSettings} />}
+            {settings && !settings.ui.welcomeDismissed && <GettingStarted onOpenSettings={onOpenSettings} onOpenLibrary={onOpenLibrary} />}
             {ps?.is3DLayer && (
                 <div className="flex items-center gap-2 p-2 rounded-md border border-primary/50 bg-primary/10">
                     <Box size={16} className="text-primary shrink-0" />

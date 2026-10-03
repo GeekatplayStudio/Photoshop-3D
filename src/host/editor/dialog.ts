@@ -27,6 +27,8 @@ export class EditorDialog {
         private readonly deps: {
             log: Logger;
             webBase: string;
+            /** Chrome DevTools for the page (off in Marketplace builds). */
+            allowInspector: boolean;
             /** Connects a webview to a bridge server; returns a disconnect function. */
             attach: (webview: UxpWebView) => () => void;
         },
@@ -66,7 +68,7 @@ export class EditorDialog {
         dialog.style.height = "100%";
         const webview = document.createElement("webview") as UxpWebView;
         webview.setAttribute("src", `${this.deps.webBase}/editor.html`);
-        webview.setAttribute("uxpAllowInspector", "true");
+        if (this.deps.allowInspector) webview.setAttribute("uxpAllowInspector", "true");
         // Start small on purpose: the webview loads while the dialog is still hidden and only
         // picks up its real bounds when its size CHANGES after the dialog is shown (verified in
         // Photoshop 27: without a change the page renders into an invisible 1921×2112 viewport).

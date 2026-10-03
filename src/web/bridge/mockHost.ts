@@ -41,6 +41,19 @@ export function createMockTransport(): Transport {
         { id: "lib_totem2", name: "Meshy totem", origin: "meshy", remoteId: "018f-mock", modelFile: "samples/totem.glb", thumbFile: "samples/totem-thumb.png", format: "glb", sizeBytes: 6880, createdAt: now - 3_600_000, importedAt: now - 3_600_000, favorite: true },
     ];
     let storedFolders = new Set<string>();
+    // ?demo=1: a library of the demo models (scripts/make-demo-models.py), for screenshots.
+    if (new URLSearchParams(location.search).get("demo")) {
+        const demo = (id: string, name: string, file: string, origin: LibraryItem["origin"], folder?: string, favorite?: boolean): LibraryItem => ({ id, name, origin, modelFile: `samples/demo/${file}.glb`, format: "glb", sizeBytes: 100_000, createdAt: now, importedAt: now - library.length * 60_000, folder, favorite });
+        library = [
+            demo("lib_rocket", "Toy rocket", "rocket", "meshy", undefined, true),
+            demo("lib_vase", "Ceramic vase", "vase", "tripo"),
+            demo("lib_mushroom", "Mushroom", "mushroom", "comfyui"),
+            demo("lib_vase2", "Vase, glazed", "vase", "local", "Props"),
+            demo("lib_mush2", "Mushroom, tall", "mushroom", "hitem3d", "Props"),
+            { ...library[0], id: "lib_totem_demo", name: "Totem" },
+        ];
+        storedFolders = new Set(["Props", "Characters"]);
+    }
     let importTarget = "";
     const folders = () => allFolders(storedFolders, library);
     const libraryChanged = () => {
@@ -49,6 +62,9 @@ export function createMockTransport(): Transport {
     };
     let jobs: Job[] = [];
     const ctx: PsContext = { hasDocument: true, docId: 1, docTitle: "Mock.psd", docWidth: 1920, docHeight: 1080, layerId: 2, layerName: "Chair", layerKind: "pixel", hasSelection: false, is3DLayer: false };
+    // ?layer3d=<name>: the active layer is a 3D layer (for screenshots of the "Edit pose & light" banner).
+    const layer3d = new URLSearchParams(location.search).get("layer3d");
+    if (layer3d) Object.assign(ctx, { layerName: `${layer3d} (3D)`, layerKind: "smartObject", is3DLayer: true, modelName: layer3d });
 
     const info: AppInfo = {
         pluginId: "com.geekatplay.photoshop3d",
@@ -66,6 +82,7 @@ export function createMockTransport(): Transport {
         theme: "dark",
         credentialsFile: "(mock)/credentials.json",
         buildStamp: "dev",
+        channel: new URLSearchParams(location.search).get("channel") === "marketplace" ? "marketplace" : "github",
     };
 
     const editorInit = (libraryId: string): EditorInit => {
@@ -207,6 +224,12 @@ export function createMockTransport(): Transport {
             libraryChanged();
         },
         "library.folders": () => folders(),
+        "library.addSample": () => {
+            const item: LibraryItem = { id: `lib_sample_${library.length}`, name: "Sample rocket", origin: "local", modelFile: "samples/demo/rocket.glb", format: "glb", sizeBytes: 104800, createdAt: Date.now(), importedAt: Date.now(), meta: { sample: true } };
+            library = [item, ...library];
+            libraryChanged();
+            return item;
+        },
         "library.createFolder": ({ parent, name }) => {
             const clean = cleanFolderName(name);
             if (!clean) throw new Error("Type a folder name.");
@@ -300,7 +323,7 @@ export function createMockTransport(): Transport {
         "editor.rememberLighting": (lighting) => {
             settings = mergeSettings(settings, { editor: { lighting } });
         },
-        "update.check": () => ({ currentVersion: "0.0.0-dev", latestVersion: "0.1.0", available: true, releaseName: "v0.1.0", releaseNotes: "Mock release notes", releaseUrl: "https://github.com/GeekatplayStudio/Photoshop-3D/releases", checkedAt: Date.now() }),
+        "update.check": () => (info.channel === "marketplace" ? { currentVersion: "0.0.0-dev", available: false, checkedAt: 0 } : { currentVersion: "0.0.0-dev", latestVersion: "0.1.0", available: true, releaseName: "v0.1.0", releaseNotes: "Mock release notes", releaseUrl: "https://github.com/GeekatplayStudio/Photoshop-3D/releases", checkedAt: Date.now() }),
         "update.install": () => ({ started: false, message: "Mock host: nothing to install." }),
         "update.skip": () => undefined,
         "shell.openExternal": ({ url }) => {

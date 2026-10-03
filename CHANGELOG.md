@@ -4,6 +4,17 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+### Added
+- **Sample model** that ships with the plugin. *Try the sample model* (Getting started card) or *Add a sample model* (empty Library) lets you pose, light, place and re-pose without any account.
+- **Meshy content moderation**, on by default (Settings › Meshy). Meshy checks the image before generating.
+- **Creative Cloud Marketplace build** (`distribution/`, see its README):
+  - `build-info.json` carries a `channel`. A Marketplace copy has no GitHub updater, because Creative Cloud updates it, and no WebView inspector.
+  - Listing text, icons, screenshots and a privacy policy (`PRIVACY.md`).
+
+### Changed
+- New plugin icon: a cube standing on a layer, lit by a sun, in the Geekatplay colors.
+- Demo models for the sample and the listing are made by `scripts/make-demo-models.py` (Blender).
+
 ## [0.1.4] - 2026-10-03
 
 ### Added

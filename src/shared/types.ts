@@ -209,4 +209,9 @@ export type AppInfo = {
     /** The file holding API keys (in the shared user-data folder). */
     credentialsFile: string;
     buildStamp: string;
+    /**
+     * Where this copy comes from: "github" (installers / GitHub releases; updates itself) or
+     * "marketplace" (Creative Cloud Marketplace; Creative Cloud updates it).
+     */
+    channel: "github" | "marketplace";
 };

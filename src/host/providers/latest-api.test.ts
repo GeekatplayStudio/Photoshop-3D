@@ -50,7 +50,8 @@ describe("Meshy (Sep 2026)", () => {
     const secrets = { "meshy.apiKey": "msy_testkey123456" };
 
     it("asks for a transparent preview and uses it", async () => {
-        expect(buildImageTo3dBody(DEFAULT_SETTINGS.meshy, "d")).toMatchObject({ alpha_thumbnail: true });
+        expect(buildImageTo3dBody(DEFAULT_SETTINGS.meshy, "d")).toMatchObject({ alpha_thumbnail: true, moderation: true });
+        expect(buildImageTo3dBody({ ...DEFAULT_SETTINGS.meshy, moderation: false }, "d")).not.toHaveProperty("moderation");
         const fetch = scriptedFetch([
             route("GET", /image-to-3d\/t1$/, () => json({ status: "SUCCEEDED", model_urls: { glb: "https://cdn/m.glb" }, thumbnail_url: "https://cdn/t.png", alpha_thumbnail_url: "https://cdn/alpha.png" })),
         ]);

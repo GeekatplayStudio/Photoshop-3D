@@ -23,6 +23,10 @@ Installed plugins update themselves from GitHub releases, so a release is the wh
 
 Tags with a suffix (`v0.3.0-beta.1`) become GitHub pre-releases. Only users who enabled *Include pre-releases* are offered them.
 
+## Creative Cloud Marketplace
+
+The Marketplace gets the same build with another plugin ID and `"channel": "marketplace"` in `build-info.json`. Creative Cloud updates it, and its GitHub updater and WebView inspector are off. [distribution/README.md](../distribution/README.md) has the listing material and the steps. To publish a new version there, build the release as usual, then run the submission folder's `build-ccx.bat -PluginId <id> -Version <x.y.z>` on the new `dist/plugin` and upload the `.ccx`.
+
 ## What the updater relies on (do not break)
 - **Repository:** `GeekatplayStudio/Photoshop-3D` (Settings › Updates › Release repository can point elsewhere).
 - **Tags:** `vMAJOR.MINOR.PATCH[-pre]`.

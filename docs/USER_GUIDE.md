@@ -16,6 +16,8 @@ Open the panel with **Plugins › Geekatplay 3D Layers › 3D Layers**. The same
 
 The first time, the **Create** tab shows a **Getting started** card (pick a service, generate from a layer, place and re-pose) with buttons to open Settings or this guide. **Hide** removes it for good.
 
+**No account yet?** Click **Try the sample model** on the card, or **Add a sample model** in the empty Library. A toy rocket is added to your library: double-click it to pose, light and place it, then double-click the layer to re-pose it. Everything except generating works without a 3D service.
+
 ## 2. Set up your services
 
 Open the panel's **Settings** tab. Each service has a section with its options and a **Test connection** button, which confirms the key or address works and shows your balance.
@@ -30,6 +32,7 @@ API keys can be typed or pasted with the clipboard button next to the field. Ctr
 - **Geometry detail:** standard / 2k / 4k (2k and 4k need meshy-7.1 or latest).
 - **Texture size:** 2k / 4k / 8k.
 - **Other options:** PBR maps, remove lighting (meshy-6), image enhancement, and remesh (topology and target polycount). With Smart Topology, only texturing, PBR and the target polycount apply.
+- **Content moderation** (on by default): Meshy checks the image for harmful content before generating, and rejects it with an explanation.
 - **Previews:** Meshy renders a transparent preview, which the library uses.
 - **Download deadline:** Meshy keeps generated files for **3 days**. The plugin downloads them as soon as a job finishes, but use **Browse** to import older Meshy tasks before they expire.
 
@@ -198,6 +201,8 @@ The plugin checks the GitHub releases of `GeekatplayStudio/Photoshop-3D` when Ph
 4. Photoshop reloads the plugin. Your library, settings and keys are kept.
 
 You can also check manually (**Check now**, or **Plugins › … › Check for Updates…**), skip a version, include pre-releases, or rerun the install script at any time.
+
+A copy installed from the **Creative Cloud Marketplace** is updated by the Creative Cloud app instead; its Settings › Updates section says so, and it never contacts GitHub.
 
 ## 9. Uninstall
 

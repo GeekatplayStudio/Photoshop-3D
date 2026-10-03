@@ -47,6 +47,11 @@ npm install
 - `node scripts/make-test-model.mjs` regenerates `tests/fixtures/public/samples/totem.glb` (committed, 7 KB).
 - `blender -b --factory-startup --python scripts/make-import-fixtures.py` regenerates `tests/fixtures/public/samples/import/`. That's a textured cube as FBX (with an external texture referenced by an absolute path), OBJ+MTL, glTF+bin, STL, PLY and USDZ, used by the import e2e test. Committed; Blender is only needed to change them.
 
+## Demo models and Marketplace assets
+- `blender -b --factory-startup --python scripts/make-demo-models.py` makes `tests/fixtures/public/samples/demo/` (toy rocket, ceramic vase, mushroom) and `plugin/samples/sample-rocket.glb`, the sample model that ships with the plugin. These are original models, so nobody else's design appears in the listing.
+- `node distribution/make-assets.mjs` (with `npm run dev:web` running) renders the Marketplace icons, publisher logo and five screenshots, and the plugin's own icons (`plugin@1x.png`, `plugin@2x.png`, `app-256.png`) from `distribution/source/icon.svg`. `node distribution/check-listing.mjs` checks them against Adobe's limits. See [distribution/README.md](../distribution/README.md).
+- The mock host takes `?demo=1` (a library of the demo models), `?layer3d=<name>` (the active layer is a 3D layer) and `?channel=marketplace` (a Marketplace copy, which has no updater).
+
 ## Documentation screenshots
 `npm run docs:screenshots` (with `npm run dev:web` running) renders `docs/images/ui-*.png` (the panel tabs, at 2×) and `ui-editor.jpg` against the mock host, so the pictures always match the current UI. The README's editor picture uses a real model:
 

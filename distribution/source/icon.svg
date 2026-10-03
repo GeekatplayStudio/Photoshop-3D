@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- Geekatplay 3D Layers - app icon. A 3D cube standing on a layer, lit by a sun.
+       Same family as Geekatplay ComfyUI Bridge: deep purple tile, cyan-to-pink accents. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#33206e"/>
+      <stop offset="1" stop-color="#140d33"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.55" r="0.55">
+      <stop offset="0" stop-color="#6d5dfc" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#6d5dfc" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b9f3ff"/>
+      <stop offset="1" stop-color="#7fd6ff"/>
+    </linearGradient>
+    <linearGradient id="left" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5aa8ff"/>
+      <stop offset="1" stop-color="#4b5df0"/>
+    </linearGradient>
+    <linearGradient id="right" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#5b2bc4"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb35c"/>
+      <stop offset="1" stop-color="#ff5d7a"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.45" stop-color="#ff8a6b" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ff8a6b" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="192" height="192" rx="42" fill="url(#bg)"/>
+  <rect x="0" y="0" width="192" height="192" rx="42" fill="url(#glow)"/>
+
+  <!-- the layer: two stacked sheets -->
+  <path d="M96 150 L158 120 L96 92 L34 120 Z" fill="#ffffff" fill-opacity="0.16"/>
+  <path d="M96 140 L158 110 L96 82 L34 110 Z" fill="#ffffff" fill-opacity="0.92"/>
+
+  <!-- cube shadow on the layer -->
+  <path d="M96 128 L134 110 L96 93 L58 110 Z" fill="#2b1b66" fill-opacity="0.35" filter="url(#soft)"/>
+
+  <!-- the cube -->
+  <path d="M96 70 L132 52 L96 34 L60 52 Z" fill="url(#top)"/>
+  <path d="M60 52 L96 70 L96 112 L60 94 Z" fill="url(#left)"/>
+  <path d="M96 70 L132 52 L132 94 L96 112 Z" fill="url(#right)"/>
+  <path d="M96 70 L96 112" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.5"/>
+
+  <!-- the sun -->
+  <circle cx="148" cy="44" r="24" fill="url(#sunGlow)"/>
+  <circle cx="148" cy="44" r="13" fill="url(#sun)"/>
+  <circle cx="144" cy="40" r="4" fill="#ffffff" fill-opacity="0.7"/>
+</svg>

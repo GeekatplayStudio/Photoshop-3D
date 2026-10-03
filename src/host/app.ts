@@ -35,7 +35,7 @@ import { SHARED_SEGMENTS, appDataRoot, toBrowserFileUrl, toUxpFileUrl } from "./
 export const PLUGIN_ID = "com.geekatplay.photoshop3d";
 export const REPO_URL = "https://github.com/GeekatplayStudio/Photoshop-3D";
 
-type BuildInfo = { version: string; stamp: string; builtAt: string };
+type BuildInfo = { version: string; stamp: string; builtAt: string; channel?: string };
 
 export type App = Awaited<ReturnType<typeof startApp>>;
 
@@ -103,6 +103,9 @@ export async function startApp() {
     await log.init();
     const build: BuildInfo = JSON.parse((await pluginStore.readText("build-info.json")) ?? '{"version":"0.0.0","stamp":"dev","builtAt":""}');
     log.info(`Geekatplay 3D Layers ${build.version} (${build.stamp}) starting in ${uxpHost.name} ${uxpHost.version}, UXP ${versions.uxp}, ${platform()}`);
+    // Marketplace copies: Creative Cloud updates them, and Adobe's review asks for no developer tools.
+    const marketplace = build.channel === "marketplace";
+    if (marketplace) log.info("Installed from the Creative Cloud Marketplace: the GitHub updater and the WebView inspector are off");
     if (dataStore === uxpDataStore) log.warn("Using the UXP data folder for user data (it is erased when the plugin is uninstalled)", sharedError ?? "unexpected data folder layout");
     else {
         log.info(`User data folder: ${dataStore.rootPath}`);
@@ -182,6 +185,7 @@ export async function startApp() {
     const editor = new EditorDialog({
         log,
         webBase: web.webBase,
+        allowInspector: !marketplace,
         attach: (webview) => {
             const server = new BridgeServer("editor", webview, handlers, log);
             bridges.set("editor", server);
@@ -216,6 +220,7 @@ export async function startApp() {
         theme: currentTheme(),
         credentialsFile: dataStore.nativePath(CREDENTIALS_FILE),
         buildStamp: build.stamp,
+        channel: marketplace ? "marketplace" : "github",
     });
 
     const modelInit = (item: LibraryItem) => ({
@@ -367,6 +372,11 @@ export async function startApp() {
         "library.addModel": ({ name, glbBase64, sourceFormat, folder, from, notes }) =>
             library.add({ name, origin: "local", model: base64ToBytes(glbBase64), folder, meta: { importedFrom: from ?? "drag and drop", sourceFormat, ...(sourceFormat !== "glb" && sourceFormat !== "gltf" ? { convertedToGlb: true } : {}), ...(notes?.length ? { notes } : {}) } }),
         "library.removeMany": ({ ids }) => library.removeMany(ids),
+        "library.addSample": async () => {
+            const model = await pluginStore.readBytes("samples/sample-rocket.glb");
+            if (!model) throw new Error("The sample model is missing from this installation.");
+            return library.add({ name: "Sample rocket", origin: "local", model, meta: { sample: true } });
+        },
         "library.move": ({ ids, folder }) => library.move(ids, folder),
         "library.folders": () => library.folders(),
         "library.createFolder": ({ parent, name }) => library.createFolder(parent, name),
@@ -449,6 +459,8 @@ export async function startApp() {
         },
 
         "update.check": async ({ force }) => {
+            // Marketplace copies are updated by Creative Cloud, never from GitHub.
+            if (marketplace) return { currentVersion: build.version, available: false, checkedAt: 0 };
             if (!force) {
                 // Panel opening: reuse the last result instead of calling GitHub every time.
                 if (updater.lastInfo) return updater.lastInfo;
@@ -458,7 +470,10 @@ export async function startApp() {
             if (info.available) emit("update.available", info);
             return info;
         },
-        "update.install": () => updater.install(),
+        "update.install": () => {
+            if (marketplace) throw new Error("This copy comes from the Creative Cloud Marketplace; the Creative Cloud app keeps it up to date.");
+            return updater.install();
+        },
         "update.skip": async ({ version }) => {
             await settings.update({ updates: { skippedVersion: version } });
         },
@@ -530,7 +545,7 @@ export async function startApp() {
         // theme events are optional
     }
 
-    if (updater.isDue()) {
+    if (!marketplace && updater.isDue()) {
         setTimeout(() => {
             if (!updater.isDue()) return; // the panel already checked
             void updater.check().then((info) => {
@@ -557,5 +572,5 @@ export async function startApp() {
     }
 
     log.info(`Ready: library ${library.list().length} models, ${jobs.list().filter((j) => j.status === "running" || j.status === "queued").length} active jobs, UI from ${web.webBase}`);
-    return { log, webBase: web.webBase, attachPanel, editActiveLayerCommand, updater, handlers };
+    return { log, webBase: web.webBase, allowInspector: !marketplace, attachPanel, editActiveLayerCommand, updater, handlers };
 }

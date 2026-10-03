@@ -32,7 +32,7 @@ function mountPanel(root: HTMLElement) {
         .then((app) => {
             const webview = document.createElement("webview") as UxpWebView;
             webview.setAttribute("src", `${app.webBase}/panel.html`);
-            webview.setAttribute("uxpAllowInspector", "true");
+            if (app.allowInspector) webview.setAttribute("uxpAllowInspector", "true");
             webview.style.cssText = "border:0;display:block;width:100%;height:400px;";
             root.appendChild(webview);
             app.attachPanel(webview);

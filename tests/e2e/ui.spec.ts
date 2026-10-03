@@ -267,3 +267,25 @@ test.describe("library folders", () => {
         await expect(page.getByText(/Added 3 models to the library/)).toBeVisible();
     });
 });
+
+test.describe("trying it without an account", () => {
+    test.use({ viewport: { width: 360, height: 900 } });
+
+    test("adds the bundled sample model from the getting-started card", async ({ page }) => {
+        await page.goto("/panel.html");
+        await page.getByTestId("try-sample").click();
+        await expect(page.getByTestId("library-card").filter({ hasText: "Sample rocket" })).toHaveCount(1);
+        await expect(page.getByText(/Sample model added/)).toBeVisible();
+    });
+});
+
+test.describe("Marketplace copy", () => {
+    test("has no GitHub updater", async ({ page }) => {
+        await page.goto("/panel.html?channel=marketplace");
+        await expect(page.getByTestId("create-section")).toBeVisible();
+        await expect(page.getByTestId("update-banner")).toHaveCount(0);
+        await page.getByTestId("tab-settings").click();
+        await expect(page.getByTestId("marketplace-updates")).toContainText("Creative Cloud app keeps it up to date");
+        await expect(page.getByRole("button", { name: "Check now" })).toHaveCount(0);
+    });
+});

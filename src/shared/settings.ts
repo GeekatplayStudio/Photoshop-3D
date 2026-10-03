@@ -70,6 +70,8 @@ export type Settings = {
         /** meshy-6 only: bake out the lighting visible in the photo. */
         removeLighting: boolean;
         imageEnhancement: boolean;
+        /** Meshy screens the input for harmful content (its `moderation` option). */
+        moderation: boolean;
     };
     tripo: {
         baseUrl: string;
@@ -167,6 +169,7 @@ export const DEFAULT_SETTINGS: Settings = {
         targetPolycount: 0,
         removeLighting: true,
         imageEnhancement: true,
+        moderation: true,
     },
     tripo: {
         baseUrl: "https://openapi.tripo3d.ai/v3",
@@ -319,6 +322,7 @@ export function sanitizeSettings(raw: unknown): Settings {
             targetPolycount: int(m.targetPolycount, 0, 0, 300_000),
             removeLighting: bool(m.removeLighting, d.meshy.removeLighting),
             imageEnhancement: bool(m.imageEnhancement, d.meshy.imageEnhancement),
+            moderation: bool(m.moderation, d.meshy.moderation),
         },
         tripo: {
             baseUrl: normalizeUrl(t.baseUrl, d.tripo.baseUrl),
