@@ -72,6 +72,10 @@ entrypoints.setup({
         editThreeDLayer: () => getApp().then((app) => app.editActiveLayerCommand()),
         checkForUpdates: () =>
             getApp().then(async (app) => {
+                if (app.marketplace) {
+                    await ps.showAlert(`Geekatplay 3D Layers ${app.version} was installed from the Creative Cloud Marketplace. The Creative Cloud app keeps it up to date.`);
+                    return;
+                }
                 const info = await app.updater.check();
                 if (info.error) await ps.showAlert(`Update check failed: ${info.error}`);
                 else if (info.available) await ps.showAlert(`Version ${info.latestVersion} is available (you have ${info.currentVersion}). Open the 3D Layers panel → Settings → Updates to install it.`);

@@ -572,5 +572,5 @@ export async function startApp() {
     }
 
     log.info(`Ready: library ${library.list().length} models, ${jobs.list().filter((j) => j.status === "running" || j.status === "queued").length} active jobs, UI from ${web.webBase}`);
-    return { log, webBase: web.webBase, allowInspector: !marketplace, attachPanel, editActiveLayerCommand, updater, handlers };
+    return { log, webBase: web.webBase, allowInspector: !marketplace, marketplace, version: build.version, attachPanel, editActiveLayerCommand, updater, handlers };
 }
