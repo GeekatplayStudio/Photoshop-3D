@@ -4,6 +4,8 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-03
+
 ### Added
 - **Sample model** that ships with the plugin. *Try the sample model* (Getting started card) or *Add a sample model* (empty Library) lets you pose, light, place and re-pose without any account.
 - **Meshy content moderation**, on by default (Settings › Meshy). Meshy checks the image before generating.
