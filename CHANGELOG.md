@@ -4,6 +4,8 @@ All notable changes. The format follows [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-03
+
 ### Added
 - **Library folders:**
   - Create folders and subfolders, open them by clicking, and go back up with the path above the grid.
